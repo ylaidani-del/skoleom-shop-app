@@ -6,10 +6,10 @@ import { Platform } from 'react-native';
 import { useUserStore } from '../store/userStore';
 import { detectPathLanguage, buildLocalizedPath } from '../i18n/urlLanguage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_SESYNC_URL;
+const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 if (!BASE_URL) {
-  throw new Error('Missing EXPO_PUBLIC_SESYNC_URL environment variable');
+  throw new Error('Missing EXPO_PUBLIC_BACKEND_URL environment variable');
 }
 
 
