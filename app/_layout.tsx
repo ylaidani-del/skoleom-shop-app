@@ -16,7 +16,7 @@ if (vexoApiKey) {
 }
 
 export const unstable_settings = {
-  initialRouteName: '(drawer)/(tabs)/index',
+  initialRouteName: '(drawer)/(tabs)/cataloge',
 };
 
 SplashScreen.preventAutoHideAsync();
