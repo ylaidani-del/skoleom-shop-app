@@ -4,10 +4,11 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
+import { useSignIn } from '@/api/user';
 import { Button } from '@/components/Button';
 import { Container } from '@/components/Container';
 import { TextField } from '@/components/TextField';
-import { useAuth } from '@/core/auth/AuthProvider';
+import { useUserStore } from '@/store/userStore';
 
 type LoginForm = {
   email: string;
@@ -16,18 +17,21 @@ type LoginForm = {
 
 export default function Login() {
   const { t } = useTranslation();
-  const { signIn } = useAuth();
+  const setSession = useUserStore((state) => state.setSession);
+  const { mutateAsync: signIn, isPending } = useSignIn();
   const [formError, setFormError] = useState<string | null>(null);
-  const {
-    control,
-    handleSubmit,
-    formState: { isSubmitting },
-  } = useForm<LoginForm>({ defaultValues: { email: '', password: '' } });
+  const { control, handleSubmit } = useForm<LoginForm>({
+    defaultValues: { email: '', password: '' },
+  });
 
   const onSubmit = async (values: LoginForm) => {
     setFormError(null);
-    const { error } = await signIn(values.email, values.password);
-    if (error) setFormError(error);
+    try {
+      const response = await signIn(values);
+      setSession(response.data.user, response.data.jwt);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err));
+    }
   };
 
   return (
@@ -52,7 +56,7 @@ export default function Login() {
 
         {formError && <Text className="mb-4 text-center text-red-500">{formError}</Text>}
 
-        <Button title={t('auth.login')} disabled={isSubmitting} onPress={handleSubmit(onSubmit)} />
+        <Button title={t('auth.login')} disabled={isPending} onPress={handleSubmit(onSubmit)} />
 
         <Link href="/(auth)/register">
           <Text className="mt-6 text-center text-indigo-500">{t('auth.noAccount')}</Text>
