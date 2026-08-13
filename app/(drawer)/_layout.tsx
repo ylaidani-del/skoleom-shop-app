@@ -7,16 +7,7 @@ import { HeaderButton } from '../../components/HeaderButton';
 const DrawerLayout = () => {
   return (
     <Drawer>
-      <Drawer.Screen
-        name="index"
-        options={{
-          headerTitle: 'Home',
-          drawerLabel: 'Home',
-          drawerIcon: ({ size, color }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
-          ),
-        }}
-      />
+
       <Drawer.Screen
         name="(tabs)"
         options={{
@@ -29,6 +20,17 @@ const DrawerLayout = () => {
             <Link href="/modal" asChild>
               <HeaderButton />
             </Link>
+          ),
+        }}
+      />
+
+            <Drawer.Screen
+        name="index"
+        options={{
+          headerTitle: 'Home',
+          drawerLabel: 'Home',
+          drawerIcon: ({ size, color }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
