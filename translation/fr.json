@@ -4,5 +4,20 @@
     "english": "Changer la langue en anglais"
   },
   "getStarted": "Ouvrez le code de cet écran :",
-  "changeCode": "Modifiez n'importe quel texte, enregistrez le fichier et votre application sera automatiquement mise à jour."
+  "changeCode": "Modifiez n'importe quel texte, enregistrez le fichier et votre application sera automatiquement mise à jour.",
+  "auth": {
+    "loginTitle": "Bon retour",
+    "registerTitle": "Créer un compte",
+    "email": "Email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "login": "Se connecter",
+    "register": "S'inscrire",
+    "logout": "Se déconnecter",
+    "noAccount": "Pas de compte ? Inscrivez-vous",
+    "haveAccount": "Déjà un compte ? Connectez-vous",
+    "required": "Ce champ est requis",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
+    "passwordMismatch": "Les mots de passe ne correspondent pas"
+  }
 }
