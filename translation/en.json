@@ -110,6 +110,16 @@
     "save": "Save",
     "cancel": "Cancel"
   },
+  "produit": {
+    "tryOn": "Try it on now",
+    "addToCart": "Add to cart",
+    "shippingTitle": "24h delivery",
+    "returnsTitle": "30-day returns",
+    "shieldTitle": "Skoleom Shield",
+    "sku": "SKU",
+    "notFound": "Product not found",
+    "loadError": "Couldn't load this product."
+  },
   "essayage": {
     "title": "Fitting room",
     "onboardingTitle": "Let's build your avatar",
@@ -131,6 +141,9 @@
     "addToCart": "Add to cart",
     "retry": "Try again",
     "error": "Something went wrong.",
-    "selectProduct": "Choose a piece to try on"
+    "selectProduct": "Choose a piece to try on",
+    "searchPlaceholder": "Search for a piece...",
+    "historyTitle": "Your try-ons",
+    "historyEmpty": "No try-ons yet."
   }
 }

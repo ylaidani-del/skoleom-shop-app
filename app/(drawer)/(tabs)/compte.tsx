@@ -166,7 +166,13 @@ export default function CompteTab() {
               <Text className="text-[12.5px] leading-[1.45] text-app-fg-2">
                 {recommendedProduct.name}
               </Text>
-              <Pressable onPress={() => router.push('/(drawer)/(tabs)/cataloge')}>
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/produit/[id]',
+                    params: { id: recommendedProduct.id },
+                  })
+                }>
                 <Text className="text-[11.5px] font-semibold text-brand-green-deep">
                   {t('compte.recoCta')}
                 </Text>

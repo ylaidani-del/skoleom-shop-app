@@ -110,6 +110,16 @@
     "save": "Enregistrer",
     "cancel": "Annuler"
   },
+  "produit": {
+    "tryOn": "Essayer sur moi maintenant",
+    "addToCart": "Ajouter au panier",
+    "shippingTitle": "Livraison 24 h",
+    "returnsTitle": "Retour 30 j",
+    "shieldTitle": "Skoleom Shield",
+    "sku": "Référence",
+    "notFound": "Produit introuvable",
+    "loadError": "Impossible de charger ce produit."
+  },
   "essayage": {
     "title": "Cabine d'essayage",
     "onboardingTitle": "Construisons votre avatar",
@@ -131,6 +141,9 @@
     "addToCart": "Ajouter au panier",
     "retry": "Réessayer",
     "error": "Une erreur est survenue.",
-    "selectProduct": "Choisissez une pièce à essayer"
+    "selectProduct": "Choisissez une pièce à essayer",
+    "searchPlaceholder": "Rechercher une pièce...",
+    "historyTitle": "Vos essayages",
+    "historyEmpty": "Aucun essayage pour le moment."
   }
 }

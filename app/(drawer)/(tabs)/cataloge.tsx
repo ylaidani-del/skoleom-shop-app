@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { applyClientFilters, flattenProducts, useProducts } from '@/api/product';
@@ -9,6 +10,7 @@ import { useFilterStore } from '@/store/filterStore';
 
 export default function CatalogueTab() {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const search = useFilterStore((state) => state.search);
   const brands = useFilterStore((state) => state.brands);
@@ -41,6 +43,9 @@ export default function CatalogueTab() {
         onEndReached={() => {
           if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();
         }}
+        onSelectProduct={(product) =>
+          router.push({ pathname: '/produit/[id]', params: { id: product.id } })
+        }
       />
     </Container>
   );

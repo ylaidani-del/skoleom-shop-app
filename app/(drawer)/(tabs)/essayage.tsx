@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  FlatList,
   Image,
   Pressable,
   ScrollView,
@@ -13,9 +15,9 @@ import {
   View,
 } from 'react-native';
 
-import { flattenProducts, useProducts, type WooProduct } from '@/api/product';
 import { useCreateAvatar, useGetUserAvatar } from '@/api/avatar';
-import { useTryOn } from '@/api/tryon';
+import { flattenProducts, useProducts, type WooProduct } from '@/api/product';
+import { useDeleteTryon, useTryOn, useTryonHistory, type TryOnHistoryItem } from '@/api/tryon';
 import { useMe } from '@/api/user';
 import { Container } from '@/components/Container';
 import { ScreenHeader } from '@/components/shop/ScreenHeader';
@@ -24,8 +26,6 @@ import { PALETTES } from '@/constants/theme';
 import { useCartStore } from '@/store/cartStore';
 import { useMeasurementsStore, type Measurements } from '@/store/measurementsStore';
 import { useThemeStore } from '@/store/themeStore';
-
-const WARDROBE_SIZE = 10;
 
 const emptyForm = { height: '', weight: '', chest: '', waist: '', footLength: '' };
 
@@ -55,6 +55,7 @@ export default function EssayageTab() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const palette = PALETTES[useThemeStore((state) => state.mode)];
+  const { productId: initialProductId } = useLocalSearchParams<{ productId?: string }>();
 
   const { data: me } = useMe();
   const userId = me?.id ?? null;
@@ -77,15 +78,27 @@ export default function EssayageTab() {
       : emptyForm
   );
   const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    initialProductId ?? null
+  );
+  const [previewHistoryItem, setPreviewHistoryItem] = useState<TryOnHistoryItem | null>(null);
+  const [search, setSearch] = useState('');
 
   const createAvatar = useCreateAvatar();
   const tryOn = useTryOn();
+  const deleteTryon = useDeleteTryon();
   const addToCart = useCartStore((state) => state.addItem);
 
-  const productsQuery = useProducts({});
-  const wardrobe = flattenProducts(productsQuery.data).slice(0, WARDROBE_SIZE);
+  const wardrobeQuery = useProducts({ search });
+  const wardrobe = flattenProducts(wardrobeQuery.data);
   const selectedProduct = wardrobe.find((p) => p.id === selectedProductId) ?? null;
+
+  const historyQuery = useTryonHistory(avatar?.avatarId);
+  const history = historyQuery.data?.data ?? [];
+
+  useEffect(() => {
+    if (initialProductId) setSelectedProductId(initialProductId);
+  }, [initialProductId]);
 
   const measurements: Measurements = {
     height: Number(form.height),
@@ -135,21 +148,29 @@ export default function EssayageTab() {
   const handleTryOn = (product: WooProduct) => {
     if (!avatar || !measurementsValid) return;
     setSelectedProductId(product.id);
+    setPreviewHistoryItem(null);
     setStoredMeasurements(measurements);
-    tryOn.mutate({
-      avatarId: avatar.avatarId,
-      measurements,
-      product: {
-        id: Number(product.id),
-        name: product.name,
-        brand: product.brand ?? '',
-        price: product.price,
-        recommendedSize: product.recommendedSize ?? 'M',
-        image: product.photos[0] ?? '',
-        type: product.type ?? '',
-        typeSlug: product.typeSlug,
+    tryOn.mutate(
+      {
+        avatarId: avatar.avatarId,
+        measurements,
+        product: {
+          id: Number(product.id),
+          name: product.name,
+          brand: product.brand ?? '',
+          price: product.price,
+          recommendedSize: product.recommendedSize ?? 'M',
+          image: product.photos[0] ?? '',
+          type: product.type ?? '',
+          typeSlug: product.typeSlug,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['tryon-history', avatar.avatarId] });
+        },
+      }
+    );
   };
 
   if (isAvatarLoading) {
@@ -243,6 +264,15 @@ export default function EssayageTab() {
     );
   }
 
+  const stageUri =
+    previewHistoryItem?.result_url ?? tryOn.data?.data.overlayUrl ?? avatar.avatarUrl;
+  const fitScore = previewHistoryItem
+    ? previewHistoryItem.fit_score
+    : (tryOn.data?.data.fitScore ?? null);
+  const recommendedSize = previewHistoryItem?.recommended_size ?? tryOn.data?.data.recommendedSize;
+  const comment = previewHistoryItem?.comment ?? tryOn.data?.data.comment;
+  const showFitCard = !!previewHistoryItem || !!tryOn.data;
+
   return (
     <Container>
       <ScreenHeader title={t('essayage.title')} />
@@ -257,21 +287,15 @@ export default function EssayageTab() {
               <Text className="text-[13px] font-medium text-white">{t('essayage.trying')}</Text>
             </View>
           ) : (
-            <Image
-              source={{ uri: tryOn.data?.data.overlayUrl ?? avatar.avatarUrl }}
-              className="h-full w-full"
-              resizeMode="cover"
-            />
+            <Image source={{ uri: stageUri }} className="h-full w-full" resizeMode="cover" />
           )}
         </View>
 
-        {tryOn.data && (
+        {showFitCard && (
           <View className="flex-row items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5">
             <View className="h-[52px] w-[52px] items-center justify-center rounded-full bg-brand-green/10">
               <Text className="text-[13px] font-bold text-brand-green-deep">
-                {tryOn.data.data.fitScore != null
-                  ? `${formatFitScore(tryOn.data.data.fitScore)}%`
-                  : '—'}
+                {fitScore != null ? `${formatFitScore(fitScore)}%` : '—'}
               </Text>
             </View>
             <View className="flex-1 gap-0.5">
@@ -279,29 +303,103 @@ export default function EssayageTab() {
                 {t('essayage.fitScore')}
               </Text>
               <Text className="text-[13px] font-semibold text-app-fg">
-                {t('essayage.recommendedSize')} {tryOn.data.data.recommendedSize}
+                {t('essayage.recommendedSize')} {recommendedSize}
               </Text>
-              {!!tryOn.data.data.comment && (
-                <Text className="text-[11px] text-app-fg-2">{tryOn.data.data.comment}</Text>
-              )}
+              {!!comment && <Text className="text-[11px] text-app-fg-2">{comment}</Text>}
             </View>
           </View>
         )}
 
         {tryOn.error && <Text className="text-[12px] text-red-500">{tryOn.error.message}</Text>}
 
+        {history.length > 0 && (
+          <View className="gap-2.5">
+            <Text className="text-[15px] font-semibold text-app-fg">
+              {t('essayage.historyTitle')}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerClassName="gap-2.5 pr-4">
+              {history.map((item) => (
+                <View key={item.id_tryon} className="w-[90px] gap-1.5">
+                  <Pressable
+                    onPress={() => setPreviewHistoryItem(item)}
+                    className={`h-[104px] w-[90px] overflow-hidden rounded-xl bg-app-fill ${
+                      previewHistoryItem?.id_tryon === item.id_tryon
+                        ? 'border-2 border-app-inv'
+                        : 'border border-app-border'
+                    }`}>
+                    <Image
+                      source={{ uri: item.result_url }}
+                      className="h-full w-full"
+                      resizeMode="cover"
+                    />
+                    <Pressable
+                      onPress={() => {
+                        deleteTryon.mutate(String(item.id_tryon));
+                        if (previewHistoryItem?.id_tryon === item.id_tryon) {
+                          setPreviewHistoryItem(null);
+                        }
+                      }}
+                      hitSlop={6}
+                      className="absolute right-1 top-1 h-5 w-5 items-center justify-center rounded-full bg-black/55">
+                      <Ionicons name="close" size={12} color="#fff" />
+                    </Pressable>
+                  </Pressable>
+                  <Text numberOfLines={1} className="text-[10.5px] font-medium text-app-fg-2">
+                    {item.product_name}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <View className="gap-2.5">
           <Text className="text-[15px] font-semibold text-app-fg">
             {t('essayage.wardrobeTitle')}
           </Text>
-          <ScrollView
+
+          <View className="h-11 flex-row items-center gap-2 rounded-xl border border-app-border-2 bg-app-surface px-3.5">
+            <Ionicons name="search" size={16} color={palette.fg3} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder={t('essayage.searchPlaceholder')}
+              placeholderTextColor={palette.fg3}
+              className="flex-1 text-[13px] text-app-fg"
+            />
+          </View>
+
+          <FlatList
+            data={wardrobe}
+            keyExtractor={(item) => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerClassName="gap-2.5 pr-4">
-            {wardrobe.map((product) => (
+            contentContainerClassName="gap-2.5 pr-4"
+            onEndReachedThreshold={0.5}
+            onEndReached={() => {
+              if (wardrobeQuery.hasNextPage && !wardrobeQuery.isFetchingNextPage) {
+                wardrobeQuery.fetchNextPage();
+              }
+            }}
+            ListEmptyComponent={
+              wardrobeQuery.isPending ? (
+                <ActivityIndicator color={palette.fg} />
+              ) : (
+                <Text className="text-[12.5px] text-app-fg-3">{t('catalogue.empty')}</Text>
+              )
+            }
+            ListFooterComponent={
+              wardrobeQuery.isFetchingNextPage ? <ActivityIndicator color={palette.fg} /> : null
+            }
+            renderItem={({ item: product }) => (
               <Pressable
-                key={product.id}
-                onPress={() => setSelectedProductId(product.id)}
+                onPress={() => {
+                  setSelectedProductId(product.id);
+                  setPreviewHistoryItem(null);
+                }}
                 className={`h-[92px] w-[74px] overflow-hidden rounded-xl bg-app-fill ${
                   product.id === selectedProductId
                     ? 'border-2 border-app-inv'
@@ -313,8 +411,8 @@ export default function EssayageTab() {
                   resizeMode="cover"
                 />
               </Pressable>
-            ))}
-          </ScrollView>
+            )}
+          />
         </View>
 
         {!selectedProduct && (

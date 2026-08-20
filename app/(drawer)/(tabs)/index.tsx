@@ -134,7 +134,13 @@ export default function AccueilTab() {
             {rows.map((row, index) => (
               <View key={index} className="flex-row gap-3">
                 {row.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onPress={(p) =>
+                      router.push({ pathname: '/produit/[id]', params: { id: p.id } })
+                    }
+                  />
                 ))}
                 {row.length === 1 && <View className="flex-1" />}
               </View>
