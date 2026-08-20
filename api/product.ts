@@ -1,4 +1,7 @@
 import { useInfiniteQuery, useQueries, useQuery, keepPreviousData } from '@tanstack/react-query';
+
+import TESTABLE_SLUGS from '@/constants/testableCategories';
+
 import { ShopRoute } from './MyAxios';
 export interface WooTaxonomyRef {
   id: number;
@@ -299,13 +302,24 @@ export const deriveFacets = (items: WooProduct[]) => {
   };
 };
 
+export const isTestableProduct = (product: WooProduct): boolean => {
+  const slugs = product.categories?.map((c) => c.slug) ?? [];
+  if (product.typeSlug) slugs.push(product.typeSlug);
+  return slugs.some((slug) => TESTABLE_SLUGS.has(slug));
+};
+
+const fetchProduct = async (id: string): Promise<WooProduct> => {
+  const { data } = await ShopRoute.get<BackendProduct | { data: BackendProduct }>(
+    `/products/${id}`
+  );
+  const raw = 'data' in data ? data.data : data;
+  return mapProduct(raw);
+};
+
 export const useProduct = (id: string) => {
   const { data, isLoading, isError, error } = useQuery<WooProduct>({
     queryKey: ['product', id],
-    queryFn: async () => {
-      const { data } = await ShopRoute.get(`/products/${id}`);
-      return data;
-    },
+    queryFn: () => fetchProduct(id),
     enabled: !!id,
   });
   return { data, isLoading, isError, error };
@@ -315,10 +329,7 @@ export const useProductsByIds = (ids: string[]) => {
   const results = useQueries({
     queries: ids.map((id) => ({
       queryKey: ['product', id],
-      queryFn: async () => {
-        const { data } = await ShopRoute.get<WooProduct>(`/products/${id}`);
-        return data;
-      },
+      queryFn: () => fetchProduct(id),
       enabled: !!id,
       staleTime: 1000 * 60 * 5,
     })),

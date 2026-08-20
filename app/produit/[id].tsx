@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useProduct } from '@/api/product';
+import { isTestableProduct, useProduct } from '@/api/product';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { PALETTES } from '@/constants/theme';
 import { useCartStore } from '@/store/cartStore';
@@ -184,16 +184,18 @@ export default function ProduitScreen() {
           </View>
 
           <View className="gap-2.5">
-            <GradientButton
-              icon="sparkles-outline"
-              label={t('produit.tryOn')}
-              onPress={() =>
-                router.push({
-                  pathname: '/(drawer)/(tabs)/essayage',
-                  params: { productId: product.id },
-                })
-              }
-            />
+            {isTestableProduct(product) && (
+              <GradientButton
+                icon="sparkles-outline"
+                label={t('produit.tryOn')}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(drawer)/(tabs)/essayage',
+                    params: { productId: product.id },
+                  })
+                }
+              />
+            )}
             <Pressable
               onPress={() => addToCart(product.id)}
               disabled={!product.inStock}

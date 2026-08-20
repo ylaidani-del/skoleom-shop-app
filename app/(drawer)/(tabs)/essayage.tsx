@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 
 import { useCreateAvatar, useGetUserAvatar } from '@/api/avatar';
-import { flattenProducts, useProducts, type WooProduct } from '@/api/product';
+import { flattenProducts, isTestableProduct, useProducts, type WooProduct } from '@/api/product';
 import { useDeleteTryon, useTryOn, useTryonHistory, type TryOnHistoryItem } from '@/api/tryon';
 import { useMe } from '@/api/user';
 import { Container } from '@/components/Container';
@@ -24,6 +24,7 @@ import { ScreenHeader } from '@/components/shop/ScreenHeader';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { PALETTES } from '@/constants/theme';
 import { useCartStore } from '@/store/cartStore';
+import { useFilterStore } from '@/store/filterStore';
 import { useMeasurementsStore, type Measurements } from '@/store/measurementsStore';
 import { useThemeStore } from '@/store/themeStore';
 
@@ -53,9 +54,11 @@ function MeasurementField({ label, value, onChangeText }: MeasurementFieldProps)
 
 export default function EssayageTab() {
   const { t } = useTranslation();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const palette = PALETTES[useThemeStore((state) => state.mode)];
   const { productId: initialProductId } = useLocalSearchParams<{ productId?: string }>();
+  const setCatalogueSearch = useFilterStore((state) => state.setSearch);
 
   const { data: me } = useMe();
   const userId = me?.id ?? null;
@@ -90,7 +93,7 @@ export default function EssayageTab() {
   const addToCart = useCartStore((state) => state.addItem);
 
   const wardrobeQuery = useProducts({ search });
-  const wardrobe = flattenProducts(wardrobeQuery.data);
+  const wardrobe = flattenProducts(wardrobeQuery.data).filter(isTestableProduct);
   const selectedProduct = wardrobe.find((p) => p.id === selectedProductId) ?? null;
 
   const historyQuery = useTryonHistory(avatar?.avatarId);
@@ -273,6 +276,15 @@ export default function EssayageTab() {
   const comment = previewHistoryItem?.comment ?? tryOn.data?.data.comment;
   const showFitCard = !!previewHistoryItem || !!tryOn.data;
 
+  const goBuy = () => {
+    if (previewHistoryItem) {
+      setCatalogueSearch(previewHistoryItem.product_name);
+      router.push('/(drawer)/(tabs)/cataloge');
+    } else if (selectedProduct) {
+      router.push({ pathname: '/produit/[id]', params: { id: selectedProduct.id } });
+    }
+  };
+
   return (
     <Container>
       <ScreenHeader title={t('essayage.title')} />
@@ -307,6 +319,12 @@ export default function EssayageTab() {
               </Text>
               {!!comment && <Text className="text-[11px] text-app-fg-2">{comment}</Text>}
             </View>
+            <Pressable
+              onPress={goBuy}
+              hitSlop={8}
+              className="h-9 w-9 items-center justify-center rounded-full bg-app-fill">
+              <Ionicons name="bag-outline" size={16} color={palette.fg} />
+            </Pressable>
           </View>
         )}
 
