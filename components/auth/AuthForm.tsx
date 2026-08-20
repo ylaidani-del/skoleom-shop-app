@@ -84,12 +84,8 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         />
 
         <View className="gap-2.5 px-5" style={{ paddingTop: insets.top + 52 }}>
-          <Image
-            source={require('@/assets/logo.png')}
-            className="h-10 w-10"
-            resizeMode="contain"
-          />
-          <Text className="text-[9.5px] font-bold uppercase tracking-[2px] text-white/72">
+          <Image source={require('@/assets/icon.png')} className="h-10 w-10" resizeMode="contain" />
+          <Text className="text-white/72 text-[9.5px] font-bold uppercase tracking-[2px]">
             Skoleom · Watch. Click. Buy.®
           </Text>
           <Text className="max-w-[270px] text-[26px] font-bold leading-[1.12] tracking-tight text-white">

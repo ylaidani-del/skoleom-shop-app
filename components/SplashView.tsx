@@ -18,7 +18,7 @@ export function SplashView() {
     spin.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.linear }), -1);
     bar.value = withRepeat(
       withTiming(1, { duration: 1250, easing: Easing.bezier(0.65, 0, 0.35, 1) }),
-      -1,
+      -1
     );
   }, [spin, bar]);
 
@@ -47,7 +47,11 @@ export function SplashView() {
           <View className="absolute inset-0.5 rounded-full bg-app-bg" />
         </Animated.View>
 
-        <Image source={require('@/assets/logo.png')} className="h-[66px] w-[66px]" resizeMode="contain" />
+        <Image
+          source={require('@/assets/icon.png')}
+          className="h-[66px] w-[66px]"
+          resizeMode="contain"
+        />
       </View>
 
       <View className="items-center gap-2">
@@ -58,10 +62,7 @@ export function SplashView() {
       </View>
 
       <View className="absolute bottom-[78px] h-[2.5px] w-[118px] overflow-hidden rounded-full bg-app-border">
-        <Animated.View
-          className="h-full w-[44%] rounded-full bg-brand-green"
-          style={barStyle}
-        />
+        <Animated.View className="h-full w-[44%] rounded-full bg-brand-green" style={barStyle} />
       </View>
     </View>
   );

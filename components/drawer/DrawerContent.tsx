@@ -29,8 +29,12 @@ export function DrawerContent({ navigation }: DrawerContentComponentProps) {
 
   return (
     <View className="flex-1 bg-app-surface">
-      <View className="flex-row items-center gap-3 border-b border-app-border px-4 pb-4 pt-safe">
-        <Image source={require('@/assets/logo.png')} className="h-[34px] w-[34px]" resizeMode="contain" />
+      <View className="pt-safe flex-row items-center gap-3 border-b border-app-border px-4 pb-4">
+        <Image
+          source={require('@/assets/icon.png')}
+          className="h-[34px] w-[34px]"
+          resizeMode="contain"
+        />
         <View className="flex-1 gap-0.5">
           <Text numberOfLines={1} className="text-[14px] font-semibold text-app-fg">
             {me?.name ?? 'Skoleom'}
@@ -47,7 +51,9 @@ export function DrawerContent({ navigation }: DrawerContentComponentProps) {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerClassName="gap-1 px-3 pt-3.5" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerClassName="gap-1 px-3 pt-3.5"
+        showsVerticalScrollIndicator={false}>
         <Text className="px-2 pb-1.5 text-[9.5px] font-bold uppercase tracking-[2px] text-app-fg-3">
           Boutique
         </Text>
@@ -62,7 +68,7 @@ export function DrawerContent({ navigation }: DrawerContentComponentProps) {
         ))}
       </ScrollView>
 
-      <View className="gap-3 border-t border-app-border px-4 pb-safe pt-3.5">
+      <View className="pb-safe gap-3 border-t border-app-border px-4 pt-3.5">
         <View className="flex-row gap-1 rounded-full bg-app-fill p-1">
           {(['light', 'dark'] as ThemeMode[]).map((option) => {
             const active = mode === option;
