@@ -195,7 +195,7 @@ export function useRecommendations() {
   return useQuery({
     queryKey: ['ai-recommendations'],
     queryFn: async () => {
-      const res = await BackRoute.get<{ productIds: number[] }>('api/ai/recommendations');
+      const res = await BackRoute.get<{ productIds: number[] }>('ai/recommendations');
       return res.data;
     },
     staleTime: 5 * 60_000,

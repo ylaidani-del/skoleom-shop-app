@@ -1,57 +1,47 @@
-import { View, Text } from 'react-native'
-import React from 'react'
-import Filter from '../../../components/shop/Filter'
-import ProductGrid from '../../../components/shop/ProductGrid'
-import {
-  useProducts,
-  flattenProducts,
-  applyClientFilters,
-  deriveFacets,
-  useCategories,
-  useBrands,
-} from '../../../api/product';
-import { useFilterStore, type SortOption } from '../../../store/filterStore';
+import { useTranslation } from 'react-i18next';
 
+import { applyClientFilters, flattenProducts, useProducts } from '@/api/product';
+import { Container } from '@/components/Container';
+import { Filter } from '@/components/shop/Filter';
+import { ProductGrid } from '@/components/shop/ProductGrid';
+import { ScreenHeader } from '@/components/shop/ScreenHeader';
+import { useFilterStore } from '@/store/filterStore';
 
-const CatalogueTab = () => {
+export default function CatalogueTab() {
+  const { t } = useTranslation();
 
-  
-  const selectedCategory = useFilterStore((s) => s.selectedCategory);
-  const brands = useFilterStore((s) => s.brands);
-  const search = useFilterStore((s) => s.search);
-  const sort = useFilterStore((s) => s.sort);
-  const maxPrice = useFilterStore((s) => s.maxPrice);
-  const inStockOnly = useFilterStore((s) => s.inStockOnly);
-  const onSaleOnly = useFilterStore((s) => s.onSaleOnly);
-  const priceTouched = useFilterStore((s) => s.priceTouched);
-  const setCategory = useFilterStore((s) => s.setCategory);
-  const setSearch = useFilterStore((s) => s.setSearch);
-  const setSort = useFilterStore((s) => s.setSort);
-  const toggleBrand = useFilterStore((s) => s.toggleBrand);
-  const toggleInStock = useFilterStore((s) => s.toggleInStock);
-  const toggleOnSale = useFilterStore((s) => s.toggleOnSale);
-  const patch = useFilterStore((s) => s.patch);
-  const reset = useFilterStore((s) => s.reset);
-  // const { data: categories } = useCategories();
-  // const { data: brands } = useBrands();
+  const search = useFilterStore((state) => state.search);
+  const brands = useFilterStore((state) => state.brands);
+  const sort = useFilterStore((state) => state.sort);
+  const inStockOnly = useFilterStore((state) => state.inStockOnly);
+  const onSaleOnly = useFilterStore((state) => state.onSaleOnly);
+  const category = useFilterStore((state) => state.getCategory());
 
-  // console.log('categories', categories)
-  const query = useProducts({
-    search,
-    category: selectedCategory || 'all',
-    brand: brands[0] || 'all',
+  const query = useProducts({ search, category, brand: brands[0] || 'all' });
+
+  const products = applyClientFilters(flattenProducts(query.data), {
+    sort,
+    inStockOnly,
+    onSaleOnly,
   });
 
-
-  console.log('query', query)
   return (
+    <Container>
+      <ScreenHeader title={t('catalogue.title')} />
 
-    <View>
-<Filter />
+      <Filter />
 
-      <ProductGrid />
-    </View>
-  )
+      <ProductGrid
+        products={products}
+        isLoading={query.isPending}
+        isError={query.isError}
+        isRefetching={query.isRefetching}
+        isFetchingNextPage={query.isFetchingNextPage}
+        onRefresh={() => query.refetch()}
+        onEndReached={() => {
+          if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();
+        }}
+      />
+    </Container>
+  );
 }
-
-export default CatalogueTab

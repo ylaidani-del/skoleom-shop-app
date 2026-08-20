@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueries, useQuery, keepPreviousData } from '@tanstack/react-query';
 import { ShopRoute } from './MyAxios';
 export interface WooTaxonomyRef {
   id: number;
@@ -172,7 +172,7 @@ export const useProductSearch = (query: string) => {
         limit: String(PER_PAGE),
       });
       const { data } = await ShopRoute.get<BackendProductsResponse>(
-        `/products?${params.toString()}`,
+        `/products?${params.toString()}`
       );
       return {
         items: (data.data ?? []).map(mapProduct),
@@ -212,7 +212,7 @@ export const useProducts = (filters: ProductFilters = {}) =>
       }
 
       const { data } = await ShopRoute.get<BackendProductsResponse>(
-        `/products?${params.toString()}`,
+        `/products?${params.toString()}`
       );
 
       return {
@@ -311,6 +311,25 @@ export const useProduct = (id: string) => {
   return { data, isLoading, isError, error };
 };
 
+export const useProductsByIds = (ids: string[]) => {
+  const results = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ['product', id],
+      queryFn: async () => {
+        const { data } = await ShopRoute.get<WooProduct>(`/products/${id}`);
+        return data;
+      },
+      enabled: !!id,
+      staleTime: 1000 * 60 * 5,
+    })),
+  });
+
+  return {
+    products: results.map((r) => r.data).filter((p): p is WooProduct => !!p),
+    isLoading: ids.length > 0 && results.some((r) => r.isLoading),
+  };
+};
+
 /* ─────────────────────────────────────────────
    À COLLER dans product.ts, juste avant `export { PER_PAGE };`
 ───────────────────────────────────────────── */
@@ -362,7 +381,7 @@ const CATEGORIES_PER_PAGE = 20;
 export const useCategoriesInfinite = (
   parent?: number,
   perPage = CATEGORIES_PER_PAGE,
-  enabled = true,
+  enabled = true
 ) =>
   useInfiniteQuery({
     queryKey: ['categories-infinite', parent ?? 'all', perPage],

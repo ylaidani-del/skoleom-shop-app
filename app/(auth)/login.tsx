@@ -21,7 +21,7 @@ export default function Login() {
   const { mutateAsync: signIn, isPending } = useSignIn();
   const [formError, setFormError] = useState<string | null>(null);
   const { control, handleSubmit } = useForm<LoginForm>({
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: 'youcef@gmail.com', password: 'a@gmail.com' },
   });
 
   const onSubmit = async (values: LoginForm) => {
