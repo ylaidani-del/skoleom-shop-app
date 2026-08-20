@@ -22,7 +22,19 @@
     "haveAccount": "Déjà un compte ? Connectez-vous",
     "required": "Ce champ est requis",
     "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
-    "passwordMismatch": "Les mots de passe ne correspondent pas"
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "loginHeadline": "Bon retour. Votre avatar vous attend.",
+    "signupHeadline": "Créez votre avatar. Essayez tout.",
+    "forgotPassword": "Mot de passe oublié ?",
+    "or": "ou",
+    "terms": "En continuant, vous acceptez les conditions d'utilisation et la politique de confidentialité de Skoleom."
+  },
+  "tabs": {
+    "accueil": "Accueil",
+    "catalogue": "Catalogue",
+    "cabine": "Cabine",
+    "panier": "Panier",
+    "compte": "Compte"
   },
   "catalogue": {
     "title": "Catalogue",

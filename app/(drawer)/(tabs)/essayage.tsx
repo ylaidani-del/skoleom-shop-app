@@ -20,8 +20,10 @@ import { useMe } from '@/api/user';
 import { Container } from '@/components/Container';
 import { ScreenHeader } from '@/components/shop/ScreenHeader';
 import { GradientButton } from '@/components/ui/GradientButton';
+import { PALETTES } from '@/constants/theme';
 import { useCartStore } from '@/store/cartStore';
 import { useMeasurementsStore, type Measurements } from '@/store/measurementsStore';
+import { useThemeStore } from '@/store/themeStore';
 
 const WARDROBE_SIZE = 10;
 
@@ -38,12 +40,12 @@ interface MeasurementFieldProps {
 function MeasurementField({ label, value, onChangeText }: MeasurementFieldProps) {
   return (
     <View className="flex-1 gap-1">
-      <Text className="text-[10.5px] font-medium text-neutral-400">{label}</Text>
+      <Text className="text-[10.5px] font-medium text-app-fg-3">{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         keyboardType="numeric"
-        className="rounded-lg border border-neutral-200 px-2.5 py-2 text-[13px] text-neutral-900"
+        className="rounded-lg border border-app-border px-2.5 py-2 text-[13px] text-app-fg"
       />
     </View>
   );
@@ -52,6 +54,7 @@ function MeasurementField({ label, value, onChangeText }: MeasurementFieldProps)
 export default function EssayageTab() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const palette = PALETTES[useThemeStore((state) => state.mode)];
 
   const { data: me } = useMe();
   const userId = me?.id ?? null;
@@ -154,7 +157,7 @@ export default function EssayageTab() {
       <Container>
         <ScreenHeader title={t('essayage.title')} />
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#1a1a1a" />
+          <ActivityIndicator color={palette.fg} />
         </View>
       </Container>
     );
@@ -263,7 +266,7 @@ export default function EssayageTab() {
         </View>
 
         {tryOn.data && (
-          <View className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3.5">
+          <View className="flex-row items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5">
             <View className="h-[52px] w-[52px] items-center justify-center rounded-full bg-brand-green/10">
               <Text className="text-[13px] font-bold text-brand-green-deep">
                 {tryOn.data.data.fitScore != null
@@ -272,14 +275,14 @@ export default function EssayageTab() {
               </Text>
             </View>
             <View className="flex-1 gap-0.5">
-              <Text className="text-[9.5px] font-bold uppercase tracking-wide text-neutral-400">
+              <Text className="text-[9.5px] font-bold uppercase tracking-wide text-app-fg-3">
                 {t('essayage.fitScore')}
               </Text>
-              <Text className="text-[13px] font-semibold text-neutral-900">
+              <Text className="text-[13px] font-semibold text-app-fg">
                 {t('essayage.recommendedSize')} {tryOn.data.data.recommendedSize}
               </Text>
               {!!tryOn.data.data.comment && (
-                <Text className="text-[11px] text-neutral-500">{tryOn.data.data.comment}</Text>
+                <Text className="text-[11px] text-app-fg-2">{tryOn.data.data.comment}</Text>
               )}
             </View>
           </View>
@@ -288,7 +291,7 @@ export default function EssayageTab() {
         {tryOn.error && <Text className="text-[12px] text-red-500">{tryOn.error.message}</Text>}
 
         <View className="gap-2.5">
-          <Text className="text-[15px] font-semibold text-neutral-900">
+          <Text className="text-[15px] font-semibold text-app-fg">
             {t('essayage.wardrobeTitle')}
           </Text>
           <ScrollView
@@ -299,10 +302,10 @@ export default function EssayageTab() {
               <Pressable
                 key={product.id}
                 onPress={() => setSelectedProductId(product.id)}
-                className={`h-[92px] w-[74px] overflow-hidden rounded-xl bg-neutral-100 ${
+                className={`h-[92px] w-[74px] overflow-hidden rounded-xl bg-app-fill ${
                   product.id === selectedProductId
-                    ? 'border-2 border-brand-black'
-                    : 'border border-neutral-200'
+                    ? 'border-2 border-app-inv'
+                    : 'border border-app-border'
                 }`}>
                 <Image
                   source={{ uri: product.photos[0] }}
@@ -315,7 +318,7 @@ export default function EssayageTab() {
         </View>
 
         {!selectedProduct && (
-          <Text className="text-[12.5px] text-neutral-400">{t('essayage.selectProduct')}</Text>
+          <Text className="text-[12.5px] text-app-fg-3">{t('essayage.selectProduct')}</Text>
         )}
 
         <View className="flex-row gap-2.5">
@@ -328,8 +331,8 @@ export default function EssayageTab() {
           {tryOn.data && selectedProduct && (
             <Pressable
               onPress={() => addToCart(selectedProduct.id)}
-              className="items-center justify-center rounded-xl bg-brand-black px-5">
-              <Text className="text-[13.5px] font-semibold text-white">
+              className="items-center justify-center rounded-xl bg-app-inv px-5">
+              <Text className="text-[13.5px] font-semibold text-app-inv-fg">
                 {t('essayage.addToCart')}
               </Text>
             </Pressable>

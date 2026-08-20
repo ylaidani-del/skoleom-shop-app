@@ -89,10 +89,10 @@ export default function AccueilTab() {
 
         <View className="gap-3">
           <View className="flex-row items-baseline justify-between gap-2.5">
-            <Text className="text-[17px] font-semibold tracking-tight text-neutral-900">
+            <Text className="text-[17px] font-semibold tracking-tight text-app-fg">
               {t('accueil.powersTitle')}
             </Text>
-            <Text className="text-[11px] font-medium text-neutral-400">
+            <Text className="text-[11px] font-medium text-app-fg-3">
               {t('accueil.powersIncluded')}
             </Text>
           </View>
@@ -104,14 +104,14 @@ export default function AccueilTab() {
             {powers.map((power) => (
               <View
                 key={power.title}
-                className="w-[154px] gap-2.5 rounded-xl border border-neutral-200 bg-white p-3.5">
+                className="w-[154px] gap-2.5 rounded-xl border border-app-border bg-app-surface p-3.5">
                 <View className="h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-brand-green/10">
                   <Ionicons name={power.icon} size={17} color="#22b222" />
                 </View>
-                <Text className="text-[13px] font-semibold leading-tight text-neutral-900">
+                <Text className="text-[13px] font-semibold leading-tight text-app-fg">
                   {power.title}
                 </Text>
-                <Text className="text-[11.5px] leading-[1.4] text-neutral-500">{power.body}</Text>
+                <Text className="text-[11.5px] leading-[1.4] text-app-fg-2">{power.body}</Text>
               </View>
             ))}
           </ScrollView>
@@ -119,7 +119,7 @@ export default function AccueilTab() {
 
         <View className="gap-2.5">
           <View className="flex-row items-baseline justify-between gap-2.5">
-            <Text className="text-[17px] font-semibold tracking-tight text-neutral-900">
+            <Text className="text-[17px] font-semibold tracking-tight text-app-fg">
               {t('accueil.trendingTitle')}
             </Text>
             <Pressable onPress={() => router.push('/(drawer)/(tabs)/cataloge')}>
@@ -128,9 +128,7 @@ export default function AccueilTab() {
               </Text>
             </Pressable>
           </View>
-          <Text className="-mt-1 text-[11.5px] text-neutral-400">
-            {t('accueil.trendingSubtitle')}
-          </Text>
+          <Text className="-mt-1 text-[11.5px] text-app-fg-3">{t('accueil.trendingSubtitle')}</Text>
 
           <View className="gap-3">
             {rows.map((row, index) => (

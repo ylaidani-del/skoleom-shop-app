@@ -22,7 +22,19 @@
     "haveAccount": "Already have an account? Log in",
     "required": "This field is required",
     "passwordTooShort": "Password must be at least 6 characters",
-    "passwordMismatch": "Passwords do not match"
+    "passwordMismatch": "Passwords do not match",
+    "loginHeadline": "Welcome back. Your avatar is waiting.",
+    "signupHeadline": "Create your avatar. Try everything.",
+    "forgotPassword": "Forgot password?",
+    "or": "or",
+    "terms": "By continuing, you agree to Skoleom's terms of use and privacy policy."
+  },
+  "tabs": {
+    "accueil": "Home",
+    "catalogue": "Catalogue",
+    "cabine": "Fitting",
+    "panier": "Cart",
+    "compte": "Account"
   },
   "catalogue": {
     "title": "Catalogue",

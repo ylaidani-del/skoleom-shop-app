@@ -1,5 +1,3 @@
-
-
 import { create } from 'zustand';
 
 export type SortOption = 'reco' | 'price-asc' | 'price-desc' | 'newest';

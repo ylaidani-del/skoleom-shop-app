@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { DrawerActions } from '@react-navigation/native';
+import { useNavigation, useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import { PALETTES } from '@/constants/theme';
 import { useCartStore } from '@/store/cartStore';
+import { useThemeStore } from '@/store/themeStore';
 
 interface ScreenHeaderProps {
   title: string;
@@ -10,28 +13,55 @@ interface ScreenHeaderProps {
 
 export function ScreenHeader({ title }: ScreenHeaderProps) {
   const router = useRouter();
+  const navigation = useNavigation();
   const cartCount = useCartStore((state) => state.totalCount());
+  const mode = useThemeStore((state) => state.mode);
+  const setMode = useThemeStore((state) => state.setMode);
+  const fg = PALETTES[mode].fg;
 
   return (
     <View className="flex-row items-end justify-between px-4 pb-1">
-      <View className="gap-0.5">
-        <Text className="text-[9.5px] font-bold uppercase tracking-[2px] text-neutral-400">
-          Skoleom · Watch. Click. Buy.®
-        </Text>
-        <Text className="text-[22px] font-semibold tracking-tight text-neutral-900">{title}</Text>
+      <View className="flex-1 flex-row items-center gap-3">
+        <Pressable
+          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+          hitSlop={8}
+          className="h-9 w-9 items-center justify-center rounded-full bg-app-fill">
+          <Ionicons name="menu" size={18} color={fg} />
+        </Pressable>
+        <View className="flex-1 gap-0.5">
+          <Text className="text-[9.5px] font-bold uppercase tracking-[2px] text-app-fg-3">
+            Skoleom · Watch. Click. Buy.®
+          </Text>
+          <Text numberOfLines={1} className="text-[22px] font-semibold tracking-tight text-app-fg">
+            {title}
+          </Text>
+        </View>
       </View>
 
-      <Pressable
-        onPress={() => router.push('/(drawer)/(tabs)/panier')}
-        hitSlop={8}
-        className="relative h-9 w-9 items-center justify-center rounded-full bg-neutral-100">
-        <Ionicons name="bag-outline" size={17} color="#1a1a1a" />
-        {cartCount > 0 && (
-          <View className="absolute -right-1 -top-1 h-4 min-w-[16px] items-center justify-center rounded-full bg-brand-black px-1">
-            <Text className="text-[9px] font-bold text-white">{cartCount}</Text>
-          </View>
-        )}
-      </Pressable>
+      <View className="flex-row gap-2">
+        <Pressable
+          onPress={() => setMode(mode === 'dark' ? 'light' : 'dark')}
+          hitSlop={8}
+          className="h-9 w-9 items-center justify-center rounded-full bg-app-fill">
+          <Ionicons
+            name={mode === 'dark' ? 'sunny-outline' : 'moon-outline'}
+            size={16}
+            color={fg}
+          />
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/(drawer)/(tabs)/panier')}
+          hitSlop={8}
+          className="relative h-9 w-9 items-center justify-center rounded-full bg-app-fill">
+          <Ionicons name="bag-outline" size={17} color={fg} />
+          {cartCount > 0 && (
+            <View className="absolute -right-1 -top-1 h-4 min-w-[16px] items-center justify-center rounded-full bg-brand-green px-1">
+              <Text className="text-[9px] font-bold text-brand-black">{cartCount}</Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }

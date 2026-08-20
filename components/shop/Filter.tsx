@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useCategories } from '@/api/product';
+import { PALETTES } from '@/constants/theme';
 import { useFilterStore, type SortOption } from '@/store/filterStore';
+import { useThemeStore } from '@/store/themeStore';
 
 const SORT_SEQUENCE: SortOption[] = ['reco', 'price-asc', 'price-desc', 'newest'];
 
@@ -12,6 +14,8 @@ const SEARCH_DEBOUNCE_MS = 350;
 
 export function Filter() {
   const { t } = useTranslation();
+  const palette = PALETTES[useThemeStore((state) => state.mode)];
+
   const search = useFilterStore((state) => state.search);
   const setSearch = useFilterStore((state) => state.setSearch);
   const selectedCategory = useFilterStore((state) => state.getCategory());
@@ -55,14 +59,14 @@ export function Filter() {
 
   return (
     <View className="gap-3 px-4 pt-3">
-      <View className="h-11 flex-row items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3.5">
-        <Ionicons name="search" size={17} color="#9ca3af" />
+      <View className="h-11 flex-row items-center gap-2 rounded-xl border border-app-border-2 bg-app-surface px-3.5">
+        <Ionicons name="search" size={17} color={palette.fg3} />
         <TextInput
           value={searchInput}
           onChangeText={onChangeSearch}
           placeholder={t('catalogue.searchPlaceholder')}
-          placeholderTextColor="#9ca3af"
-          className="flex-1 text-[13px] text-neutral-900"
+          placeholderTextColor={palette.fg3}
+          className="flex-1 text-[13px] text-app-fg"
         />
       </View>
 
@@ -77,10 +81,10 @@ export function Filter() {
               key={chip.slug}
               onPress={() => setCategory(chip.slug === 'all' ? '' : chip.slug)}
               className={`h-[34px] justify-center rounded-full border px-3.5 ${
-                active ? 'border-transparent bg-brand-black' : 'border-neutral-200 bg-white'
+                active ? 'border-transparent bg-app-inv' : 'border-app-border-2 bg-app-surface'
               }`}>
               <Text
-                className={`text-[12.5px] font-medium ${active ? 'text-white' : 'text-neutral-600'}`}>
+                className={`text-[12.5px] font-medium ${active ? 'text-app-inv-fg' : 'text-app-fg-2'}`}>
                 {chip.name}
               </Text>
             </Pressable>
@@ -92,20 +96,20 @@ export function Filter() {
         <Pressable
           onPress={toggleOnSale}
           className={`h-8 flex-row items-center gap-1.5 rounded-full border px-3 ${
-            onSaleOnly ? 'border-transparent bg-brand-black' : 'border-neutral-200 bg-white'
+            onSaleOnly ? 'border-transparent bg-app-inv' : 'border-app-border-2 bg-app-surface'
           }`}>
-          <Ionicons name="pricetag" size={13} color={onSaleOnly ? '#fff' : '#555'} />
+          <Ionicons name="pricetag" size={13} color={onSaleOnly ? palette.invFg : palette.fg2} />
           <Text
-            className={`text-[12px] font-medium ${onSaleOnly ? 'text-white' : 'text-neutral-600'}`}>
+            className={`text-[12px] font-medium ${onSaleOnly ? 'text-app-inv-fg' : 'text-app-fg-2'}`}>
             {t('catalogue.onSale')}
           </Text>
         </Pressable>
 
         <Pressable
           onPress={cycleSort}
-          className="h-8 flex-row items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3">
-          <Ionicons name="swap-vertical" size={13} color="#555" />
-          <Text className="text-[12px] font-medium text-neutral-600">{sortLabels[sort]}</Text>
+          className="h-8 flex-row items-center gap-1.5 rounded-full border border-app-border-2 bg-app-surface px-3">
+          <Ionicons name="swap-vertical" size={13} color={palette.fg2} />
+          <Text className="text-[12px] font-medium text-app-fg-2">{sortLabels[sort]}</Text>
         </Pressable>
       </View>
     </View>

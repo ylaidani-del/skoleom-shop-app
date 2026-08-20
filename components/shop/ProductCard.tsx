@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Image, Pressable, Text, View } from 'react-native';
 
 import { type WooProduct } from '@/api/product';
+import { PALETTES } from '@/constants/theme';
 import { useCartStore } from '@/store/cartStore';
 import { useFavoritesStore } from '@/store/favoritesStore';
+import { useThemeStore } from '@/store/themeStore';
 import { formatPrice } from '@/utils/currency';
 
 interface ProductCardProps {
@@ -17,6 +19,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
   const isFavorite = useFavoritesStore((state) => state.isFavorite(product.id));
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const addToCart = useCartStore((state) => state.addItem);
+  const invFg = PALETTES[useThemeStore((state) => state.mode)].invFg;
 
   const cover = product.photos[0];
   const badgeLabel = product.onSale ? 'Promo' : (product.type ?? '');
@@ -27,7 +30,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
       className="flex-1 gap-2 active:opacity-80"
       accessibilityRole="button"
       accessibilityLabel={product.name}>
-      <View className="aspect-[100/112] overflow-hidden rounded-xl bg-neutral-100">
+      <View className="aspect-[100/112] overflow-hidden rounded-xl bg-app-fill">
         {cover ? (
           <Image source={{ uri: cover }} className="h-full w-full" resizeMode="cover" />
         ) : (
@@ -68,22 +71,20 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
 
       <View className="gap-0.5 px-0.5">
         {!!product.brand && (
-          <Text className="text-[10px] font-medium uppercase tracking-wide text-neutral-400">
+          <Text className="text-[10px] font-medium uppercase tracking-wide text-app-fg-3">
             {product.brand}
           </Text>
         )}
-        <Text
-          numberOfLines={1}
-          className="text-[12.5px] font-semibold leading-tight text-neutral-900">
+        <Text numberOfLines={1} className="text-[12.5px] font-semibold leading-tight text-app-fg">
           {product.name}
         </Text>
         <View className="flex-row items-center justify-between gap-1.5 pt-0.5">
           <View className="flex-shrink flex-row items-baseline gap-1.5">
-            <Text className="text-[13.5px] font-bold text-neutral-900">
+            <Text className="text-[13.5px] font-bold text-app-fg">
               {formatPrice(product.onSale ? product.salePrice : product.price)}
             </Text>
             {product.onSale && (
-              <Text className="text-[11px] text-neutral-400 line-through">
+              <Text className="text-[11px] text-app-fg-3 line-through">
                 {formatPrice(product.regularPrice)}
               </Text>
             )}
@@ -92,10 +93,10 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
             onPress={() => addToCart(product.id)}
             disabled={!product.inStock}
             hitSlop={8}
-            className="h-[26px] w-[26px] items-center justify-center rounded-full bg-neutral-900 disabled:opacity-30"
+            className="h-[26px] w-[26px] items-center justify-center rounded-full bg-app-inv disabled:opacity-30"
             accessibilityRole="button"
             accessibilityLabel={t('catalogue.addToCart')}>
-            <Ionicons name="add" size={15} color="#fff" />
+            <Ionicons name="add" size={15} color={invFg} />
           </Pressable>
         </View>
       </View>

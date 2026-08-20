@@ -1,3 +1,31 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --app-bg: #ffffff;
+  --app-surface: #ffffff;
+  --app-surface-2: #f7f7f5;
+  --app-fill: #f2f2ef;
+  --app-fg: #1a1a1a;
+  --app-fg-2: #555555;
+  --app-fg-3: #9ca3af;
+  --app-border: #ececec;
+  --app-border-2: #e0e0e0;
+  --app-inv: #1a1a1a;
+  --app-inv-fg: #ffffff;
+}
+
+.dark:root {
+  --app-bg: #111111;
+  --app-surface: #1a1a1a;
+  --app-surface-2: #1e1e1e;
+  --app-fill: rgba(255, 255, 255, 0.07);
+  --app-fg: #ffffff;
+  --app-fg-2: rgba(255, 255, 255, 0.65);
+  --app-fg-3: rgba(255, 255, 255, 0.38);
+  --app-border: rgba(255, 255, 255, 0.12);
+  --app-border-2: rgba(255, 255, 255, 0.16);
+  --app-inv: #ffffff;
+  --app-inv-fg: #111111;
+}

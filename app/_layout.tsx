@@ -5,9 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
+import { SplashView } from '@/components/SplashView';
 import { useUserStore } from '@/store/userStore';
+
+const MIN_SPLASH_MS = 1100;
 
 const vexoApiKey = process.env.EXPO_PUBLIC_VEXO_API_KEY;
 if (vexoApiKey) {
@@ -16,7 +19,7 @@ if (vexoApiKey) {
 }
 
 export const unstable_settings = {
-  initialRouteName: '(drawer)/(tabs)/cataloge',
+  initialRouteName: '(drawer)/(tabs)/index',
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -26,22 +29,22 @@ const queryClient = new QueryClient();
 function RootNavigator() {
   const user = useUserStore((state) => state.user);
   const hasHydrated = useUserStore((state) => state.hasHydrated);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
   useEffect(() => {
-    if (hasHydrated) {
-      SplashScreen.hideAsync();
-    }
-  }, [hasHydrated]);
+    SplashScreen.hideAsync();
+    const timer = setTimeout(() => setMinTimeElapsed(true), MIN_SPLASH_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
-  if (!hasHydrated) {
-    return null;
+  if (!hasHydrated || !minTimeElapsed) {
+    return <SplashView />;
   }
 
   return (
     <Stack>
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ title: 'Modal', presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

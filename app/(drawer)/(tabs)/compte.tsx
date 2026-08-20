@@ -10,8 +10,10 @@ import { useRecommendations } from '@/api/tryon';
 import { Container } from '@/components/Container';
 import { ScreenHeader } from '@/components/shop/ScreenHeader';
 import { LinearGradient } from '@/components/ui/LinearGradient';
+import { PALETTES } from '@/constants/theme';
 import { useCartStore } from '@/store/cartStore';
 import { useFavoritesStore } from '@/store/favoritesStore';
+import { useThemeStore } from '@/store/themeStore';
 
 const initials = (name: string) =>
   name
@@ -31,6 +33,7 @@ const ROLE_KEYS: Record<string, string> = {
 export default function CompteTab() {
   const { t } = useTranslation();
   const router = useRouter();
+  const palette = PALETTES[useThemeStore((state) => state.mode)];
 
   const { data: me } = useMe();
   const { mutate: signOut, isPending: isSigningOut } = useSignOut();
@@ -64,7 +67,7 @@ export default function CompteTab() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerClassName="gap-5 px-4 pb-10 pt-2">
-        <View className="gap-3.5 rounded-2xl border border-neutral-200 bg-white p-4">
+        <View className="gap-3.5 rounded-2xl border border-app-border bg-app-surface p-4">
           <View className="flex-row items-center gap-3.5">
             <View className="h-14 w-14 overflow-hidden rounded-full p-0.5">
               <LinearGradient
@@ -73,16 +76,16 @@ export default function CompteTab() {
                 end={{ x: 1, y: 1 }}
                 className="absolute inset-0"
               />
-              <View className="m-0.5 flex-1 items-center justify-center rounded-full bg-neutral-100">
-                <Text className="text-[17px] font-bold text-neutral-900">
+              <View className="m-0.5 flex-1 items-center justify-center rounded-full bg-app-fill">
+                <Text className="text-[17px] font-bold text-app-fg">
                   {me?.name ? initials(me.name) : '—'}
                 </Text>
               </View>
             </View>
 
             <View className="flex-1 gap-0.5">
-              <Text className="text-[16px] font-semibold text-neutral-900">{me?.name}</Text>
-              <Text className="text-[11.5px] text-neutral-500">
+              <Text className="text-[16px] font-semibold text-app-fg">{me?.name}</Text>
+              <Text className="text-[11.5px] text-app-fg-2">
                 {me?.role ? t(ROLE_KEYS[me.role] ?? 'auth.roleBuyer') : ''}
               </Text>
             </View>
@@ -91,19 +94,19 @@ export default function CompteTab() {
               <Pressable
                 onPress={startEditing}
                 hitSlop={8}
-                className="h-[34px] w-[34px] items-center justify-center rounded-full bg-neutral-100">
-                <Ionicons name="pencil-outline" size={16} color="#555" />
+                className="h-[34px] w-[34px] items-center justify-center rounded-full bg-app-fill">
+                <Ionicons name="pencil-outline" size={16} color={palette.fg2} />
               </Pressable>
             )}
           </View>
 
           {isEditing && (
-            <View className="gap-2.5 border-t border-neutral-100 pt-3.5">
+            <View className="gap-2.5 border-t border-app-border pt-3.5">
               <TextInput
                 value={name}
                 onChangeText={setName}
                 placeholder={t('auth.name')}
-                className="rounded-lg border border-neutral-200 px-3.5 py-2.5 text-[13px] text-neutral-900"
+                className="rounded-lg border border-app-border px-3.5 py-2.5 text-[13px] text-app-fg"
               />
               <TextInput
                 value={email}
@@ -111,21 +114,23 @@ export default function CompteTab() {
                 placeholder={t('auth.email')}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                className="rounded-lg border border-neutral-200 px-3.5 py-2.5 text-[13px] text-neutral-900"
+                className="rounded-lg border border-app-border px-3.5 py-2.5 text-[13px] text-app-fg"
               />
               <View className="flex-row gap-2.5">
                 <Pressable
                   onPress={() => setIsEditing(false)}
-                  className="flex-1 items-center rounded-lg border border-neutral-200 py-2.5">
-                  <Text className="text-[13px] font-medium text-neutral-600">
+                  className="flex-1 items-center rounded-lg border border-app-border py-2.5">
+                  <Text className="text-[13px] font-medium text-app-fg-2">
                     {t('compte.cancel')}
                   </Text>
                 </Pressable>
                 <Pressable
                   onPress={save}
                   disabled={isSaving}
-                  className="flex-1 items-center rounded-lg bg-brand-black py-2.5 disabled:opacity-50">
-                  <Text className="text-[13px] font-semibold text-white">{t('compte.save')}</Text>
+                  className="flex-1 items-center rounded-lg bg-app-inv py-2.5 disabled:opacity-50">
+                  <Text className="text-[13px] font-semibold text-app-inv-fg">
+                    {t('compte.save')}
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -133,36 +138,32 @@ export default function CompteTab() {
         </View>
 
         <View className="flex-row gap-2.5">
-          <View className="flex-1 items-center gap-1 rounded-xl border border-neutral-200 bg-neutral-50 py-3.5">
-            <Text className="text-[16px] font-bold tracking-tight text-neutral-900">
-              {cartCount}
-            </Text>
-            <Text className="text-[9.5px] font-medium text-neutral-400">
-              {t('compte.cartStat')}
-            </Text>
+          <View className="flex-1 items-center gap-1 rounded-xl border border-app-border bg-app-surface-2 py-3.5">
+            <Text className="text-[16px] font-bold tracking-tight text-app-fg">{cartCount}</Text>
+            <Text className="text-[9.5px] font-medium text-app-fg-3">{t('compte.cartStat')}</Text>
           </View>
-          <View className="flex-1 items-center gap-1 rounded-xl border border-neutral-200 bg-neutral-50 py-3.5">
-            <Text className="text-[16px] font-bold tracking-tight text-neutral-900">
+          <View className="flex-1 items-center gap-1 rounded-xl border border-app-border bg-app-surface-2 py-3.5">
+            <Text className="text-[16px] font-bold tracking-tight text-app-fg">
               {favoritesCount}
             </Text>
-            <Text className="text-[9.5px] font-medium text-neutral-400">
+            <Text className="text-[9.5px] font-medium text-app-fg-3">
               {t('compte.favoritesStat')}
             </Text>
           </View>
         </View>
 
         {recommendedProduct && (
-          <View className="flex-row gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-3.5">
+          <View className="flex-row gap-3 rounded-2xl border border-app-border bg-app-surface-2 p-3.5">
             <Image
               source={{ uri: recommendedProduct.photos[0] }}
-              className="h-[70px] w-[58px] rounded-[10px] bg-neutral-100"
+              className="h-[70px] w-[58px] rounded-[10px] bg-app-fill"
               resizeMode="cover"
             />
             <View className="flex-1 gap-1">
               <Text className="text-[9.5px] font-bold uppercase tracking-wide text-brand-green-deep">
                 {t('compte.recoEyebrow')}
               </Text>
-              <Text className="text-[12.5px] leading-[1.45] text-neutral-600">
+              <Text className="text-[12.5px] leading-[1.45] text-app-fg-2">
                 {recommendedProduct.name}
               </Text>
               <Pressable onPress={() => router.push('/(drawer)/(tabs)/cataloge')}>
@@ -177,8 +178,8 @@ export default function CompteTab() {
         <Pressable
           onPress={() => signOut()}
           disabled={isSigningOut}
-          className="items-center rounded-xl border border-neutral-200 py-3.5 disabled:opacity-50">
-          <Text className="text-[13.5px] font-semibold text-neutral-900">{t('auth.logout')}</Text>
+          className="items-center rounded-xl border border-app-border py-3.5 disabled:opacity-50">
+          <Text className="text-[13.5px] font-semibold text-app-fg">{t('auth.logout')}</Text>
         </Pressable>
       </ScrollView>
     </Container>
