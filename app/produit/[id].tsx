@@ -24,6 +24,7 @@ import { formatPrice } from '@/utils/currency';
 import { stripHtml } from '@/utils/html';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const GALLERY_HEIGHT = SCREEN_WIDTH * 1.16;
 
 const TRUST_TILES = [
   { icon: 'cube-outline' as const, key: 'shippingTitle' },
@@ -79,20 +80,21 @@ export default function ProduitScreen() {
   return (
     <View className="flex-1 bg-app-bg">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
-        <View className="relative bg-app-surface-2">
+        <View className="relative bg-app-surface-2" style={{ height: GALLERY_HEIGHT }}>
           <FlatList
             data={photos}
             keyExtractor={(uri, index) => `${uri}-${index}`}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
+            style={{ height: GALLERY_HEIGHT }}
             onMomentumScrollEnd={(e) =>
               setActiveImage(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH))
             }
             renderItem={({ item }) => (
               <Image
                 source={{ uri: item }}
-                style={{ width: SCREEN_WIDTH, aspectRatio: 1 / 1.16 }}
+                style={{ width: SCREEN_WIDTH, height: GALLERY_HEIGHT }}
                 resizeMode="cover"
               />
             )}

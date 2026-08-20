@@ -30,6 +30,9 @@ import { useThemeStore } from '@/store/themeStore';
 
 const emptyForm = { height: '', weight: '', chest: '', waist: '', footLength: '' };
 
+const WARDROBE_ITEM_HEIGHT = 92;
+const WARDROBE_ITEM_WIDTH = 74;
+
 const formatFitScore = (score: number) => Math.round(score <= 1 ? score * 100 : score);
 
 interface MeasurementFieldProps {
@@ -395,7 +398,8 @@ export default function EssayageTab() {
             keyExtractor={(item) => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerClassName="gap-2.5 pr-4"
+            style={{ height: WARDROBE_ITEM_HEIGHT }}
+            contentContainerClassName="items-center gap-2.5 pr-4"
             onEndReachedThreshold={0.5}
             onEndReached={() => {
               if (wardrobeQuery.hasNextPage && !wardrobeQuery.isFetchingNextPage) {
@@ -418,7 +422,8 @@ export default function EssayageTab() {
                   setSelectedProductId(product.id);
                   setPreviewHistoryItem(null);
                 }}
-                className={`h-[92px] w-[74px] overflow-hidden rounded-xl bg-app-fill ${
+                style={{ height: WARDROBE_ITEM_HEIGHT, width: WARDROBE_ITEM_WIDTH }}
+                className={`overflow-hidden rounded-xl bg-app-fill ${
                   product.id === selectedProductId
                     ? 'border-2 border-app-inv'
                     : 'border border-app-border'
