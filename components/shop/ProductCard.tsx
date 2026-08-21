@@ -19,7 +19,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
   const isFavorite = useFavoritesStore((state) => state.isFavorite(product.id));
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const addToCart = useCartStore((state) => state.addItem);
-  const invFg = PALETTES[useThemeStore((state) => state.mode)].invFg;
+  const palette = PALETTES[useThemeStore((state) => state.mode)];
 
   const cover = product.photos[0];
   const badgeLabel = product.onSale ? 'Promo' : (product.type ?? '');
@@ -35,7 +35,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
           <Image source={{ uri: cover }} className="h-full w-full" resizeMode="cover" />
         ) : (
           <View className="h-full w-full items-center justify-center">
-            <Ionicons name="image-outline" size={22} color="#9ca3af" />
+            <Ionicons name="image-outline" size={22} color={palette.fg3} />
           </View>
         )}
 
@@ -96,7 +96,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
             className="h-[26px] w-[26px] items-center justify-center rounded-full bg-app-inv disabled:opacity-30"
             accessibilityRole="button"
             accessibilityLabel={t('catalogue.addToCart')}>
-            <Ionicons name="add" size={15} color={invFg} />
+            <Ionicons name="add" size={15} color={palette.invFg} />
           </Pressable>
         </View>
       </View>

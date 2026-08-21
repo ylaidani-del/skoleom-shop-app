@@ -295,7 +295,7 @@ export default function EssayageTab() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerClassName="gap-5 px-4 pb-10 pt-2">
-        <View className="aspect-[1/1.14] overflow-hidden rounded-2xl bg-neutral-900">
+        <View className="aspect-[1/1.14] overflow-hidden rounded-2xl bg-brand-black">
           {tryOn.isPending ? (
             <View className="flex-1 items-center justify-center gap-3">
               <ActivityIndicator color="#dbea18" />
