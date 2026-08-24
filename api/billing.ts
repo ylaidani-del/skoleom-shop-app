@@ -25,13 +25,14 @@ export const useSubscription = () =>
 export interface CheckoutSession {
   clientSecret: string;
   sessionId: string;
+  url?: string;
 }
 
 export const useCheckout = () =>
   useMutation<CheckoutSession, Error, void>({
     mutationFn: async () => {
       const { data } = await BackRoute.post('/billing/checkout', {});
-      return { clientSecret: data?.clientSecret, sessionId: data?.sessionId };
+      return { clientSecret: data?.clientSecret, sessionId: data?.sessionId, url: data?.url };
     },
   });
 

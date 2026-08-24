@@ -15,7 +15,7 @@ import {
   View,
 } from 'react-native';
 
-import { useCreateAvatar, useGetUserAvatar } from '@/api/avatar';
+import { useCreateAvatar, useGetUserAvatar, useUpdateAvatar } from '@/api/avatar';
 import { flattenProducts, isTestableProduct, useProducts, type WooProduct } from '@/api/product';
 import { useDeleteTryon, useTryOn, useTryonHistory, type TryOnHistoryItem } from '@/api/tryon';
 import { useMe } from '@/api/user';
@@ -89,8 +89,10 @@ export default function EssayageTab() {
   );
   const [previewHistoryItem, setPreviewHistoryItem] = useState<TryOnHistoryItem | null>(null);
   const [search, setSearch] = useState('');
+  const [isEditingMeasurements, setIsEditingMeasurements] = useState(false);
 
   const createAvatar = useCreateAvatar();
+  const updateAvatar = useUpdateAvatar();
   const tryOn = useTryOn();
   const deleteTryon = useDeleteTryon();
   const addToCart = useCartStore((state) => state.addItem);
@@ -105,6 +107,32 @@ export default function EssayageTab() {
   useEffect(() => {
     if (initialProductId) setSelectedProductId(initialProductId);
   }, [initialProductId]);
+
+  // Local measurements are device-only (AsyncStorage). If the user already has
+  // a server-side avatar but no local measurements (fresh install, new device,
+  // cleared storage...), fall back to the measurements stored with the avatar
+  // so the "Essayer sur moi" button isn't silently stuck disabled.
+  useEffect(() => {
+    if (storedMeasurements || !avatar?.measurements) return;
+    const m = avatar.measurements;
+    const seeded: Measurements = {
+      height: Number(m.height) || 0,
+      weight: Number(m.weight) || 0,
+      chest: Number(m.chest) || 0,
+      waist: Number(m.waist) || 0,
+      footLength: Number(m.footLength) || 0,
+    };
+    if (Object.values(seeded).every((value) => value > 0)) {
+      setStoredMeasurements(seeded);
+      setForm({
+        height: String(seeded.height),
+        weight: String(seeded.weight),
+        chest: String(seeded.chest),
+        waist: String(seeded.waist),
+        footLength: String(seeded.footLength),
+      });
+    }
+  }, [avatar, storedMeasurements, setStoredMeasurements]);
 
   const measurements: Measurements = {
     height: Number(form.height),
@@ -332,6 +360,80 @@ export default function EssayageTab() {
         )}
 
         {tryOn.error && <Text className="text-[12px] text-red-500">{tryOn.error.message}</Text>}
+
+        <View className="gap-2.5 rounded-2xl border border-app-border bg-app-surface p-3.5">
+          <Pressable
+            onPress={() => setIsEditingMeasurements((prev) => !prev)}
+            className="flex-row items-center justify-between">
+            <Text className="text-[13px] font-semibold text-app-fg">
+              {t('essayage.myMeasurements')}
+            </Text>
+            <Ionicons
+              name={isEditingMeasurements ? 'chevron-up' : 'pencil-outline'}
+              size={16}
+              color={palette.fg2}
+            />
+          </Pressable>
+
+          {isEditingMeasurements && (
+            <View className="gap-2.5 pt-1">
+              <View className="flex-row gap-2.5">
+                <MeasurementField
+                  label={t('essayage.heightLabel')}
+                  value={form.height}
+                  onChangeText={setField('height')}
+                />
+                <MeasurementField
+                  label={t('essayage.weightLabel')}
+                  value={form.weight}
+                  onChangeText={setField('weight')}
+                />
+              </View>
+              <View className="flex-row gap-2.5">
+                <MeasurementField
+                  label={t('essayage.chestLabel')}
+                  value={form.chest}
+                  onChangeText={setField('chest')}
+                />
+                <MeasurementField
+                  label={t('essayage.waistLabel')}
+                  value={form.waist}
+                  onChangeText={setField('waist')}
+                />
+                <MeasurementField
+                  label={t('essayage.footLabel')}
+                  value={form.footLength}
+                  onChangeText={setField('footLength')}
+                />
+              </View>
+
+              {updateAvatar.error && (
+                <Text className="text-[12px] text-red-500">{updateAvatar.error.message}</Text>
+              )}
+
+              <Pressable
+                onPress={() => {
+                  if (!measurementsValid) return;
+                  updateAvatar.mutate(
+                    { avatarId: avatar.avatarId, measurements },
+                    {
+                      onSuccess: () => {
+                        setStoredMeasurements(measurements);
+                        setIsEditingMeasurements(false);
+                        queryClient.invalidateQueries({ queryKey: ['ai-avatar', 'user', userId] });
+                      },
+                    }
+                  );
+                }}
+                disabled={!measurementsValid || updateAvatar.isPending}
+                className="items-center rounded-lg bg-app-inv py-2.5 disabled:opacity-40">
+                <Text className="text-[13px] font-semibold text-app-inv-fg">
+                  {updateAvatar.isPending ? t('essayage.creating') : t('essayage.saveMeasurements')}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
 
         {history.length > 0 && (
           <View className="gap-2.5">

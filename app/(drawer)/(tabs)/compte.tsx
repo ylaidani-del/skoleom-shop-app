@@ -1,19 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { useGetUserAvatar } from '@/api/avatar';
+import { useCancelSubscription, useCheckout, useSubscription } from '@/api/billing';
 import { useProduct } from '@/api/product';
 import { useMe, useSignOut, useUpdateProfile } from '@/api/user';
 import { useRecommendations } from '@/api/tryon';
 import { Container } from '@/components/Container';
 import { ScreenHeader } from '@/components/shop/ScreenHeader';
+import { GradientButton } from '@/components/ui/GradientButton';
 import { LinearGradient } from '@/components/ui/LinearGradient';
 import { PALETTES } from '@/constants/theme';
 import { useCartStore } from '@/store/cartStore';
 import { useFavoritesStore } from '@/store/favoritesStore';
 import { useThemeStore } from '@/store/themeStore';
+
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 
 const initials = (name: string) =>
   name
@@ -38,6 +45,12 @@ export default function CompteTab() {
   const { data: me } = useMe();
   const { mutate: signOut, isPending: isSigningOut } = useSignOut();
   const { mutate: updateProfile, isPending: isSaving } = useUpdateProfile();
+  const { data: avatarResponse } = useGetUserAvatar(me?.id ?? null);
+  const avatar = avatarResponse?.data ?? null;
+
+  const { data: subscription, isLoading: isSubLoading } = useSubscription();
+  const checkout = useCheckout();
+  const cancelSubscription = useCancelSubscription();
 
   const cartCount = useCartStore((state) => state.totalCount());
   const favoritesCount = useFavoritesStore((state) => state.ids.length);
@@ -60,6 +73,14 @@ export default function CompteTab() {
     updateProfile({ name, email }, { onSuccess: () => setIsEditing(false) });
   };
 
+  const handleSubscribe = () => {
+    checkout.mutate(undefined, {
+      onSuccess: async (session) => {
+        if (session.url) await WebBrowser.openBrowserAsync(session.url);
+      },
+    });
+  };
+
   return (
     <Container>
       <ScreenHeader title={t('compte.title')} />
@@ -69,18 +90,35 @@ export default function CompteTab() {
         contentContainerClassName="gap-5 px-4 pb-10 pt-2">
         <View className="gap-3.5 rounded-2xl border border-app-border bg-app-surface p-4">
           <View className="flex-row items-center gap-3.5">
-            <View className="h-14 w-14 overflow-hidden rounded-full p-0.5">
-              <LinearGradient
-                colors={['#4bdd2c', '#dbea18']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                className="absolute inset-0"
-              />
-              <View className="m-0.5 flex-1 items-center justify-center rounded-full bg-app-fill">
-                <Text className="text-[17px] font-bold text-app-fg">
-                  {me?.name ? initials(me.name) : '—'}
-                </Text>
+            <View className="relative h-14 w-14">
+              <View className="h-14 w-14 overflow-hidden rounded-full p-0.5">
+                <LinearGradient
+                  colors={['#4bdd2c', '#dbea18']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  className="absolute inset-0"
+                />
+                <View className="m-0.5 flex-1 items-center justify-center overflow-hidden rounded-full bg-app-fill">
+                  {avatar?.avatarUrl ? (
+                    <Image
+                      source={{ uri: avatar.avatarUrl }}
+                      className="h-full w-full"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text className="text-[17px] font-bold text-app-fg">
+                      {me?.name ? initials(me.name) : '—'}
+                    </Text>
+                  )}
+                </View>
               </View>
+              <Pressable
+                onPress={() => router.push('/(drawer)/(tabs)/essayage')}
+                hitSlop={6}
+                accessibilityLabel={t('compte.editAvatar')}
+                className="absolute -bottom-0.5 -right-0.5 h-5 w-5 items-center justify-center rounded-full border-2 border-app-surface bg-app-inv">
+                <Ionicons name="pencil" size={10} color={palette.invFg} />
+              </Pressable>
             </View>
 
             <View className="flex-1 gap-0.5">
@@ -134,6 +172,60 @@ export default function CompteTab() {
                 </Pressable>
               </View>
             </View>
+          )}
+        </View>
+
+        <View className="gap-3 rounded-2xl border border-app-border bg-app-surface p-4">
+          <Text className="text-[13px] font-semibold text-app-fg">{t('compte.planTitle')}</Text>
+
+          {isSubLoading ? (
+            <ActivityIndicator color={palette.fg} />
+          ) : subscription?.status === 'active' ? (
+            <View className="gap-2.5">
+              <View className="flex-row items-center gap-2">
+                <View className="rounded-full bg-brand-green/15 px-2.5 py-1">
+                  <Text className="text-[10.5px] font-bold uppercase tracking-wide text-brand-green-deep">
+                    {t('compte.planActive')}
+                  </Text>
+                </View>
+                <Text className="text-[12.5px] text-app-fg-2">
+                  {subscription.planRole === 'vendeur'
+                    ? t('compte.planSeller')
+                    : t('compte.planBuyer')}
+                </Text>
+              </View>
+              <Text className="text-[11.5px] text-app-fg-3">
+                {subscription.cancelAtPeriodEnd
+                  ? t('compte.planEndsOn', { date: formatDate(subscription.currentPeriodEnd) })
+                  : t('compte.planRenewsOn', { date: formatDate(subscription.currentPeriodEnd) })}
+              </Text>
+              {!subscription.cancelAtPeriodEnd && (
+                <Pressable
+                  onPress={() => cancelSubscription.mutate()}
+                  disabled={cancelSubscription.isPending}
+                  className="items-center rounded-lg border border-app-border py-2.5 disabled:opacity-50">
+                  <Text className="text-[12.5px] font-semibold text-app-fg-2">
+                    {cancelSubscription.isPending ? t('compte.canceling') : t('compte.cancelPlan')}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            <View className="gap-2.5">
+              <Text className="text-[12px] text-app-fg-2">{t('compte.planNoneBody')}</Text>
+              <GradientButton
+                label={checkout.isPending ? t('compte.subscribing') : t('compte.subscribeCta')}
+                onPress={handleSubscribe}
+                disabled={checkout.isPending}
+              />
+            </View>
+          )}
+
+          {checkout.error && (
+            <Text className="text-[12px] text-red-500">{checkout.error.message}</Text>
+          )}
+          {cancelSubscription.error && (
+            <Text className="text-[12px] text-red-500">{cancelSubscription.error.message}</Text>
           )}
         </View>
 
