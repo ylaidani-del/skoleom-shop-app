@@ -9,6 +9,7 @@ import {
   FlatList,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -27,11 +28,9 @@ import { useCartStore } from '@/store/cartStore';
 import { useFilterStore } from '@/store/filterStore';
 import { useMeasurementsStore, type Measurements } from '@/store/measurementsStore';
 import { useThemeStore } from '@/store/themeStore';
+import { formatPrice } from '@/utils/currency';
 
 const emptyForm = { height: '', weight: '', chest: '', waist: '', footLength: '' };
-
-const WARDROBE_ITEM_HEIGHT = 92;
-const WARDROBE_ITEM_WIDTH = 74;
 
 const formatFitScore = (score: number) => Math.round(score <= 1 ? score * 100 : score);
 
@@ -52,6 +51,41 @@ function MeasurementField({ label, value, onChangeText }: MeasurementFieldProps)
         className="rounded-lg border border-app-border px-2.5 py-2 text-[13px] text-app-fg"
       />
     </View>
+  );
+}
+
+interface WardrobeGridItemProps {
+  product: WooProduct;
+  selected: boolean;
+  invFg: string;
+  onSelect: () => void;
+}
+
+function WardrobeGridItem({ product, selected, invFg, onSelect }: WardrobeGridItemProps) {
+  return (
+    <Pressable
+      onPress={onSelect}
+      className="flex-1 gap-1.5 active:opacity-80"
+      accessibilityRole="button"
+      accessibilityLabel={product.name}>
+      <View
+        className={`aspect-[100/112] overflow-hidden rounded-xl bg-app-fill ${
+          selected ? 'border-2 border-app-inv' : 'border border-app-border'
+        }`}>
+        <Image source={{ uri: product.photos[0] }} className="h-full w-full" resizeMode="cover" />
+        {selected && (
+          <View className="absolute right-1.5 top-1.5 h-6 w-6 items-center justify-center rounded-full bg-app-inv">
+            <Ionicons name="checkmark" size={14} color={invFg} />
+          </View>
+        )}
+      </View>
+      <Text numberOfLines={1} className="px-0.5 text-[12px] font-medium text-app-fg">
+        {product.name}
+      </Text>
+      <Text className="px-0.5 text-[12.5px] font-bold text-app-fg">
+        {formatPrice(product.onSale ? product.salePrice : product.price)}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -320,230 +354,250 @@ export default function EssayageTab() {
     <Container>
       <ScreenHeader title={t('essayage.title')} />
 
-      <ScrollView
+      <FlatList
+        data={wardrobe}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperClassName="gap-3"
+        contentContainerClassName="gap-3 px-4 pb-4 pt-2"
         showsVerticalScrollIndicator={false}
-        contentContainerClassName="gap-5 px-4 pb-10 pt-2">
-        <View className="aspect-[1/1.14] overflow-hidden rounded-2xl bg-brand-black">
-          {tryOn.isPending ? (
-            <View className="flex-1 items-center justify-center gap-3">
-              <ActivityIndicator color="#dbea18" />
-              <Text className="text-[13px] font-medium text-white">{t('essayage.trying')}</Text>
-            </View>
-          ) : (
-            <Image source={{ uri: stageUri }} className="h-full w-full" resizeMode="cover" />
-          )}
-        </View>
-
-        {showFitCard && (
-          <View className="flex-row items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5">
-            <View className="h-[52px] w-[52px] items-center justify-center rounded-full bg-brand-green/10">
-              <Text className="text-[13px] font-bold text-brand-green-deep">
-                {fitScore != null ? `${formatFitScore(fitScore)}%` : '—'}
-              </Text>
-            </View>
-            <View className="flex-1 gap-0.5">
-              <Text className="text-[9.5px] font-bold uppercase tracking-wide text-app-fg-3">
-                {t('essayage.fitScore')}
-              </Text>
-              <Text className="text-[13px] font-semibold text-app-fg">
-                {t('essayage.recommendedSize')} {recommendedSize}
-              </Text>
-              {!!comment && <Text className="text-[11px] text-app-fg-2">{comment}</Text>}
-            </View>
-            <Pressable
-              onPress={goBuy}
-              hitSlop={8}
-              className="h-9 w-9 items-center justify-center rounded-full bg-app-fill">
-              <Ionicons name="bag-outline" size={16} color={palette.fg} />
-            </Pressable>
-          </View>
-        )}
-
-        {tryOn.error && <Text className="text-[12px] text-red-500">{tryOn.error.message}</Text>}
-
-        <View className="gap-2.5 rounded-2xl border border-app-border bg-app-surface p-3.5">
-          <Pressable
-            onPress={() => setIsEditingMeasurements((prev) => !prev)}
-            className="flex-row items-center justify-between">
-            <Text className="text-[13px] font-semibold text-app-fg">
-              {t('essayage.myMeasurements')}
-            </Text>
-            <Ionicons
-              name={isEditingMeasurements ? 'chevron-up' : 'pencil-outline'}
-              size={16}
-              color={palette.fg2}
-            />
-          </Pressable>
-
-          {isEditingMeasurements && (
-            <View className="gap-2.5 pt-1">
-              <View className="flex-row gap-2.5">
-                <MeasurementField
-                  label={t('essayage.heightLabel')}
-                  value={form.height}
-                  onChangeText={setField('height')}
-                />
-                <MeasurementField
-                  label={t('essayage.weightLabel')}
-                  value={form.weight}
-                  onChangeText={setField('weight')}
-                />
-              </View>
-              <View className="flex-row gap-2.5">
-                <MeasurementField
-                  label={t('essayage.chestLabel')}
-                  value={form.chest}
-                  onChangeText={setField('chest')}
-                />
-                <MeasurementField
-                  label={t('essayage.waistLabel')}
-                  value={form.waist}
-                  onChangeText={setField('waist')}
-                />
-                <MeasurementField
-                  label={t('essayage.footLabel')}
-                  value={form.footLength}
-                  onChangeText={setField('footLength')}
-                />
-              </View>
-
-              {updateAvatar.error && (
-                <Text className="text-[12px] text-red-500">{updateAvatar.error.message}</Text>
-              )}
-
-              <Pressable
-                onPress={() => {
-                  if (!measurementsValid) return;
-                  updateAvatar.mutate(
-                    { avatarId: avatar.avatarId, measurements },
-                    {
-                      onSuccess: () => {
-                        setStoredMeasurements(measurements);
-                        setIsEditingMeasurements(false);
-                        queryClient.invalidateQueries({ queryKey: ['ai-avatar', 'user', userId] });
-                      },
-                    }
-                  );
-                }}
-                disabled={!measurementsValid || updateAvatar.isPending}
-                className="items-center rounded-lg bg-app-inv py-2.5 disabled:opacity-40">
-                <Text className="text-[13px] font-semibold text-app-inv-fg">
-                  {updateAvatar.isPending ? t('essayage.creating') : t('essayage.saveMeasurements')}
-                </Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-
-        {history.length > 0 && (
-          <View className="gap-2.5">
-            <Text className="text-[15px] font-semibold text-app-fg">
-              {t('essayage.historyTitle')}
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerClassName="gap-2.5 pr-4">
-              {history.map((item) => (
-                <View key={item.id_tryon} className="w-[90px] gap-1.5">
-                  <Pressable
-                    onPress={() => setPreviewHistoryItem(item)}
-                    className={`h-[104px] w-[90px] overflow-hidden rounded-xl bg-app-fill ${
-                      previewHistoryItem?.id_tryon === item.id_tryon
-                        ? 'border-2 border-app-inv'
-                        : 'border border-app-border'
-                    }`}>
-                    <Image
-                      source={{ uri: item.result_url }}
-                      className="h-full w-full"
-                      resizeMode="cover"
-                    />
-                    <Pressable
-                      onPress={() => {
-                        deleteTryon.mutate(String(item.id_tryon));
-                        if (previewHistoryItem?.id_tryon === item.id_tryon) {
-                          setPreviewHistoryItem(null);
-                        }
-                      }}
-                      hitSlop={6}
-                      className="absolute right-1 top-1 h-5 w-5 items-center justify-center rounded-full bg-black/55">
-                      <Ionicons name="close" size={12} color="#fff" />
-                    </Pressable>
-                  </Pressable>
-                  <Text numberOfLines={1} className="text-[10.5px] font-medium text-app-fg-2">
-                    {item.product_name}
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (wardrobeQuery.hasNextPage && !wardrobeQuery.isFetchingNextPage) {
+            wardrobeQuery.fetchNextPage();
+          }
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={wardrobeQuery.isRefetching}
+            onRefresh={() => wardrobeQuery.refetch()}
+            tintColor={palette.fg}
+          />
+        }
+        ListHeaderComponent={
+          <View className="gap-5 pb-5">
+            <View className="aspect-[1/1.14] overflow-hidden rounded-2xl bg-brand-black">
+              {tryOn.isPending ? (
+                <View className="flex-1 items-center justify-center gap-3">
+                  <ActivityIndicator color="#dbea18" />
+                  <Text className="text-[13px] font-medium text-white">
+                    {t('essayage.trying')}
                   </Text>
                 </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        <View className="gap-2.5">
-          <Text className="text-[15px] font-semibold text-app-fg">
-            {t('essayage.wardrobeTitle')}
-          </Text>
-
-          <View className="h-11 flex-row items-center gap-2 rounded-xl border border-app-border-2 bg-app-surface px-3.5">
-            <Ionicons name="search" size={16} color={palette.fg3} />
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder={t('essayage.searchPlaceholder')}
-              placeholderTextColor={palette.fg3}
-              className="flex-1 text-[13px] text-app-fg"
-            />
-          </View>
-
-          <FlatList
-            data={wardrobe}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ height: WARDROBE_ITEM_HEIGHT }}
-            contentContainerClassName="items-center gap-2.5 pr-4"
-            onEndReachedThreshold={0.5}
-            onEndReached={() => {
-              if (wardrobeQuery.hasNextPage && !wardrobeQuery.isFetchingNextPage) {
-                wardrobeQuery.fetchNextPage();
-              }
-            }}
-            ListEmptyComponent={
-              wardrobeQuery.isPending ? (
-                <ActivityIndicator color={palette.fg} />
               ) : (
-                <Text className="text-[12.5px] text-app-fg-3">{t('catalogue.empty')}</Text>
-              )
-            }
-            ListFooterComponent={
-              wardrobeQuery.isFetchingNextPage ? <ActivityIndicator color={palette.fg} /> : null
-            }
-            renderItem={({ item: product }) => (
+                <Image source={{ uri: stageUri }} className="h-full w-full" resizeMode="cover" />
+              )}
+            </View>
+
+            {showFitCard && (
+              <View className="flex-row items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5">
+                <View className="h-[52px] w-[52px] items-center justify-center rounded-full bg-brand-green/10">
+                  <Text className="text-[13px] font-bold text-brand-green-deep">
+                    {fitScore != null ? `${formatFitScore(fitScore)}%` : '—'}
+                  </Text>
+                </View>
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-[9.5px] font-bold uppercase tracking-wide text-app-fg-3">
+                    {t('essayage.fitScore')}
+                  </Text>
+                  <Text className="text-[13px] font-semibold text-app-fg">
+                    {t('essayage.recommendedSize')} {recommendedSize}
+                  </Text>
+                  {!!comment && <Text className="text-[11px] text-app-fg-2">{comment}</Text>}
+                </View>
+                <Pressable
+                  onPress={goBuy}
+                  hitSlop={8}
+                  className="h-9 w-9 items-center justify-center rounded-full bg-app-fill">
+                  <Ionicons name="bag-outline" size={16} color={palette.fg} />
+                </Pressable>
+              </View>
+            )}
+
+            {tryOn.error && (
+              <Text className="text-[12px] text-red-500">{tryOn.error.message}</Text>
+            )}
+
+            <View className="gap-2.5 rounded-2xl border border-app-border bg-app-surface p-3.5">
               <Pressable
-                onPress={() => {
-                  setSelectedProductId(product.id);
-                  setPreviewHistoryItem(null);
-                }}
-                style={{ height: WARDROBE_ITEM_HEIGHT, width: WARDROBE_ITEM_WIDTH }}
-                className={`overflow-hidden rounded-xl bg-app-fill ${
-                  product.id === selectedProductId
-                    ? 'border-2 border-app-inv'
-                    : 'border border-app-border'
-                }`}>
-                <Image
-                  source={{ uri: product.photos[0] }}
-                  className="h-full w-full"
-                  resizeMode="cover"
+                onPress={() => setIsEditingMeasurements((prev) => !prev)}
+                className="flex-row items-center justify-between">
+                <Text className="text-[13px] font-semibold text-app-fg">
+                  {t('essayage.myMeasurements')}
+                </Text>
+                <Ionicons
+                  name={isEditingMeasurements ? 'chevron-up' : 'pencil-outline'}
+                  size={16}
+                  color={palette.fg2}
                 />
               </Pressable>
+
+              {isEditingMeasurements && (
+                <View className="gap-2.5 pt-1">
+                  <View className="flex-row gap-2.5">
+                    <MeasurementField
+                      label={t('essayage.heightLabel')}
+                      value={form.height}
+                      onChangeText={setField('height')}
+                    />
+                    <MeasurementField
+                      label={t('essayage.weightLabel')}
+                      value={form.weight}
+                      onChangeText={setField('weight')}
+                    />
+                  </View>
+                  <View className="flex-row gap-2.5">
+                    <MeasurementField
+                      label={t('essayage.chestLabel')}
+                      value={form.chest}
+                      onChangeText={setField('chest')}
+                    />
+                    <MeasurementField
+                      label={t('essayage.waistLabel')}
+                      value={form.waist}
+                      onChangeText={setField('waist')}
+                    />
+                    <MeasurementField
+                      label={t('essayage.footLabel')}
+                      value={form.footLength}
+                      onChangeText={setField('footLength')}
+                    />
+                  </View>
+
+                  {updateAvatar.error && (
+                    <Text className="text-[12px] text-red-500">{updateAvatar.error.message}</Text>
+                  )}
+
+                  <Pressable
+                    onPress={() => {
+                      if (!measurementsValid) return;
+                      updateAvatar.mutate(
+                        { avatarId: avatar.avatarId, measurements },
+                        {
+                          onSuccess: () => {
+                            setStoredMeasurements(measurements);
+                            setIsEditingMeasurements(false);
+                            queryClient.invalidateQueries({
+                              queryKey: ['ai-avatar', 'user', userId],
+                            });
+                          },
+                        }
+                      );
+                    }}
+                    disabled={!measurementsValid || updateAvatar.isPending}
+                    className="items-center rounded-lg bg-app-inv py-2.5 disabled:opacity-40">
+                    <Text className="text-[13px] font-semibold text-app-inv-fg">
+                      {updateAvatar.isPending
+                        ? t('essayage.creating')
+                        : t('essayage.saveMeasurements')}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+
+            {history.length > 0 && (
+              <View className="gap-2.5">
+                <Text className="text-[15px] font-semibold text-app-fg">
+                  {t('essayage.historyTitle')}
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerClassName="gap-2.5 pr-4">
+                  {history.map((item) => (
+                    <View key={item.id_tryon} className="w-[90px] gap-1.5">
+                      <Pressable
+                        onPress={() => setPreviewHistoryItem(item)}
+                        className={`h-[104px] w-[90px] overflow-hidden rounded-xl bg-app-fill ${
+                          previewHistoryItem?.id_tryon === item.id_tryon
+                            ? 'border-2 border-app-inv'
+                            : 'border border-app-border'
+                        }`}>
+                        <Image
+                          source={{ uri: item.result_url }}
+                          className="h-full w-full"
+                          resizeMode="cover"
+                        />
+                        <Pressable
+                          onPress={() => {
+                            deleteTryon.mutate(String(item.id_tryon));
+                            if (previewHistoryItem?.id_tryon === item.id_tryon) {
+                              setPreviewHistoryItem(null);
+                            }
+                          }}
+                          hitSlop={6}
+                          className="absolute right-1 top-1 h-5 w-5 items-center justify-center rounded-full bg-black/55">
+                          <Ionicons name="close" size={12} color="#fff" />
+                        </Pressable>
+                      </Pressable>
+                      <Text numberOfLines={1} className="text-[10.5px] font-medium text-app-fg-2">
+                        {item.product_name}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
             )}
+
+            <View className="gap-2.5">
+              <Text className="text-[15px] font-semibold text-app-fg">
+                {t('essayage.wardrobeTitle')}
+              </Text>
+
+              <View className="h-11 flex-row items-center gap-2 rounded-xl border border-app-border-2 bg-app-surface px-3.5">
+                <Ionicons name="search" size={16} color={palette.fg3} />
+                <TextInput
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholder={t('essayage.searchPlaceholder')}
+                  placeholderTextColor={palette.fg3}
+                  className="flex-1 text-[13px] text-app-fg"
+                />
+              </View>
+            </View>
+          </View>
+        }
+        ListEmptyComponent={
+          wardrobeQuery.isPending ? (
+            <View className="items-center py-10">
+              <ActivityIndicator color={palette.fg} />
+            </View>
+          ) : (
+            <View className="items-center gap-2 py-10">
+              <Ionicons name="shirt-outline" size={26} color={palette.fg3} />
+              <Text className="text-[12.5px] text-app-fg-3">{t('catalogue.empty')}</Text>
+            </View>
+          )
+        }
+        ListFooterComponent={
+          wardrobeQuery.isFetchingNextPage ? (
+            <View className="py-4">
+              <ActivityIndicator color={palette.fg} />
+            </View>
+          ) : (
+            <View className="h-24" />
+          )
+        }
+        renderItem={({ item: product }) => (
+          <WardrobeGridItem
+            product={product}
+            selected={product.id === selectedProductId}
+            invFg={palette.invFg}
+            onSelect={() => {
+              setSelectedProductId(product.id);
+              setPreviewHistoryItem(null);
+            }}
           />
-        </View>
-
-        {!selectedProduct && (
-          <Text className="text-[12.5px] text-app-fg-3">{t('essayage.selectProduct')}</Text>
         )}
+      />
 
+      <View className="pb-safe gap-2 border-t border-app-border bg-app-surface px-4 pt-3">
+        {!selectedProduct && (
+          <Text className="text-center text-[12px] text-app-fg-3">
+            {t('essayage.selectProduct')}
+          </Text>
+        )}
         <View className="flex-row gap-2.5">
           <GradientButton
             className="flex-1"
@@ -561,7 +615,7 @@ export default function EssayageTab() {
             </Pressable>
           )}
         </View>
-      </ScrollView>
+      </View>
     </Container>
   );
 }

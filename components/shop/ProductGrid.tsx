@@ -62,11 +62,7 @@ export function ProductGrid({
       columnWrapperClassName="gap-3"
       contentContainerClassName="gap-3 px-4 pb-8 pt-1"
       renderItem={({ item }) => <ProductCard product={item} onPress={onSelectProduct} />}
-      ListHeaderComponent={
-        <Text className="mb-2 text-[11.5px] text-app-fg-3">
-          {t('catalogue.resultsCount', { count: products.length })}
-        </Text>
-      }
+      
       ListEmptyComponent={
         <View className="items-center gap-2 px-6 py-16">
           <Ionicons name="search-outline" size={28} color={palette.fg3} />

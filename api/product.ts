@@ -308,12 +308,43 @@ export const isTestableProduct = (product: WooProduct): boolean => {
   return slugs.some((slug) => TESTABLE_SLUGS.has(slug));
 };
 
+// The single-product endpoint (`/products/:id`) returns the raw WooCommerce
+// REST shape, not the normalized shape the list endpoint (`/products`)
+// returns — different field names (`name` vs `title`, no `featured_image`)
+// and `images` is an array of `{ src }` objects instead of plain URL
+// strings. Normalize it to `BackendProduct` before handing it to
+// `mapProduct`, which only understands the normalized shape.
+const normalizeRawProduct = (raw: Record<string, unknown>): BackendProduct => {
+  const rawImages = Array.isArray(raw.images) ? raw.images : [];
+  const imageUrls = rawImages
+    .map((img) => (typeof img === 'string' ? img : (img as { src?: string })?.src))
+    .filter((src): src is string => !!src);
+
+  return {
+    id: raw.id as number,
+    title: (raw.title as string) ?? (raw.name as string) ?? '',
+    slug: raw.slug as string,
+    price: raw.price as string,
+    regular_price: raw.regular_price as string,
+    sale_price: raw.sale_price as string,
+    sku: (raw.sku as string) ?? '',
+    stock_quantity: (raw.stock_quantity as number) ?? null,
+    is_in_stock:
+      typeof raw.is_in_stock === 'boolean' ? raw.is_in_stock : raw.stock_status === 'instock',
+    description: (raw.description as string) ?? '',
+    short_description: (raw.short_description as string) ?? '',
+    categories: (raw.categories as WooTaxonomyRef[]) ?? [],
+    brands: (raw.brands as WooTaxonomyRef[]) ?? [],
+    tags: (raw.tags as unknown[]) ?? [],
+    images: (raw.featured_image as string) ? imageUrls : imageUrls.slice(1),
+    featured_image: (raw.featured_image as string) ?? imageUrls[0] ?? '',
+  };
+};
+
 const fetchProduct = async (id: string): Promise<WooProduct> => {
-  const { data } = await ShopRoute.get<BackendProduct | { data: BackendProduct }>(
-    `/products/${id}`
-  );
-  const raw = 'data' in data ? data.data : data;
-  return mapProduct(raw);
+  const { data } = await ShopRoute.get<Record<string, unknown>>(`/products/${id}`);
+  const raw = ('data' in data ? data.data : data) as Record<string, unknown>;
+  return mapProduct(normalizeRawProduct(raw));
 };
 
 export const useProduct = (id: string) => {
