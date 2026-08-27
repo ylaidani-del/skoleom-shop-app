@@ -24,6 +24,7 @@ import { Container } from '@/components/Container';
 import { ScreenHeader } from '@/components/shop/ScreenHeader';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { PALETTES } from '@/constants/theme';
+import { TESTABLE_SLUGS_PARAM } from '@/constants/testableCategories';
 import { useCartStore } from '@/store/cartStore';
 import { useFilterStore } from '@/store/filterStore';
 import { useMeasurementsStore, type Measurements } from '@/store/measurementsStore';
@@ -131,7 +132,7 @@ export default function EssayageTab() {
   const deleteTryon = useDeleteTryon();
   const addToCart = useCartStore((state) => state.addItem);
 
-  const wardrobeQuery = useProducts({ search });
+  const wardrobeQuery = useProducts({ search, category: TESTABLE_SLUGS_PARAM });
   const wardrobe = flattenProducts(wardrobeQuery.data).filter(isTestableProduct);
   const selectedProduct = wardrobe.find((p) => p.id === selectedProductId) ?? null;
 

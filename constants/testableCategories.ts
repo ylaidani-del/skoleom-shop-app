@@ -16,4 +16,9 @@ const TESTABLE_SLUGS = new Set([
   'sport',
 ]);
 
+// Comma-separated slug list for the `categories` query param, so the
+// wardrobe list can be filtered server-side instead of over-fetching
+// non-clothing pages and filtering them out client-side.
+export const TESTABLE_SLUGS_PARAM = [...TESTABLE_SLUGS].join(',');
+
 export default TESTABLE_SLUGS;
