@@ -98,7 +98,30 @@
     "total": "Total",
     "checkout": "Place order",
     "promoInvalid": "Invalid promo code",
-    "promoApplied": "Promo code applied"
+    "promoApplied": "Promo code applied",
+    "applying": "Applying…",
+    "shippingAtNextStep": "Calculated at next step"
+  },
+  "checkout": {
+    "shippingTitle": "Shipping",
+    "zoneLabel": "Delivery zone",
+    "methodLabel": "Delivery method",
+    "selectZoneFirst": "Choose a zone to see available methods",
+    "relayLabel": "Relay point",
+    "shippingError": "Couldn't save your shipping choice. Please try again.",
+    "continueToPayment": "Continue to payment",
+    "saving": "Saving…",
+    "paymentTitle": "Payment",
+    "orderSummary": "Order summary",
+    "cardPayment": "Pay by card",
+    "cardPaymentBody": "You'll be redirected to a secure payment page to complete your purchase.",
+    "paymentError": "Couldn't start the payment. Please try again.",
+    "payNow": "Pay now",
+    "redirecting": "Redirecting…",
+    "confirming": "Confirming your payment…",
+    "successTitle": "Payment received",
+    "successBody": "Your order has been placed successfully.",
+    "backToShop": "Back to shop"
   },
   "compte": {
     "title": "My account",
@@ -125,6 +148,7 @@
   "produit": {
     "tryOn": "Try it on now",
     "addToCart": "Add to cart",
+    "addingToCart": "Adding…",
     "shippingTitle": "24h delivery",
     "returnsTitle": "30-day returns",
     "shieldTitle": "Skoleom Shield",

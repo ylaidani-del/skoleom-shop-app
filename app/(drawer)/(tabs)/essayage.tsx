@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 
 import { useCreateAvatar, useGetUserAvatar, useUpdateAvatar } from '@/api/avatar';
+import { useAddCartItem } from '@/api/cart';
 import { flattenProducts, isTestableProduct, useProducts, type WooProduct } from '@/api/product';
 import { useDeleteTryon, useTryOn, useTryonHistory, type TryOnHistoryItem } from '@/api/tryon';
 import { useMe } from '@/api/user';
@@ -25,7 +26,6 @@ import { ScreenHeader } from '@/components/shop/ScreenHeader';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { PALETTES } from '@/constants/theme';
 import { TESTABLE_SLUGS_PARAM } from '@/constants/testableCategories';
-import { useCartStore } from '@/store/cartStore';
 import { useFilterStore } from '@/store/filterStore';
 import { useMeasurementsStore, type Measurements } from '@/store/measurementsStore';
 import { useThemeStore } from '@/store/themeStore';
@@ -130,7 +130,7 @@ export default function EssayageTab() {
   const updateAvatar = useUpdateAvatar();
   const tryOn = useTryOn();
   const deleteTryon = useDeleteTryon();
-  const addToCart = useCartStore((state) => state.addItem);
+  const addToCart = useAddCartItem();
 
   const wardrobeQuery = useProducts({ search, category: TESTABLE_SLUGS_PARAM });
   const wardrobe = flattenProducts(wardrobeQuery.data).filter(isTestableProduct);
@@ -608,8 +608,9 @@ export default function EssayageTab() {
           />
           {tryOn.data && selectedProduct && (
             <Pressable
-              onPress={() => addToCart(selectedProduct.id)}
-              className="items-center justify-center rounded-xl bg-app-inv px-5">
+              onPress={() => addToCart.mutate({ id: selectedProduct.id })}
+              disabled={addToCart.isPending}
+              className="items-center justify-center rounded-xl bg-app-inv px-5 disabled:opacity-50">
               <Text className="text-[13.5px] font-semibold text-app-inv-fg">
                 {t('essayage.addToCart')}
               </Text>

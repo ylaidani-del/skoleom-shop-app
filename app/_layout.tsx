@@ -58,6 +58,8 @@ function RootNavigator() {
         <Stack.Protected guard={!!user}>
           <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
           <Stack.Screen name="produit/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="checkout/shipping" options={{ headerShown: false }} />
+          <Stack.Screen name="checkout/payment" options={{ headerShown: false }} />
         </Stack.Protected>
         <Stack.Protected guard={!user}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />

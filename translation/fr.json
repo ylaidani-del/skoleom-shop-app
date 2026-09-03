@@ -98,7 +98,30 @@
     "total": "Total",
     "checkout": "Passer la commande",
     "promoInvalid": "Code promo invalide",
-    "promoApplied": "Code promo appliqué"
+    "promoApplied": "Code promo appliqué",
+    "applying": "Application…",
+    "shippingAtNextStep": "Calculée à l'étape suivante"
+  },
+  "checkout": {
+    "shippingTitle": "Livraison",
+    "zoneLabel": "Zone de livraison",
+    "methodLabel": "Mode de livraison",
+    "selectZoneFirst": "Choisissez une zone pour voir les modes disponibles",
+    "relayLabel": "Point relais",
+    "shippingError": "Impossible d'enregistrer votre choix de livraison. Réessayez.",
+    "continueToPayment": "Continuer vers le paiement",
+    "saving": "Enregistrement…",
+    "paymentTitle": "Paiement",
+    "orderSummary": "Récapitulatif de la commande",
+    "cardPayment": "Payer par carte",
+    "cardPaymentBody": "Vous serez redirigé vers une page de paiement sécurisée pour finaliser votre achat.",
+    "paymentError": "Impossible de démarrer le paiement. Réessayez.",
+    "payNow": "Payer maintenant",
+    "redirecting": "Redirection…",
+    "confirming": "Confirmation du paiement…",
+    "successTitle": "Paiement reçu",
+    "successBody": "Votre commande a bien été passée.",
+    "backToShop": "Retour à la boutique"
   },
   "compte": {
     "title": "Mon compte",
@@ -125,6 +148,7 @@
   "produit": {
     "tryOn": "Essayer sur moi maintenant",
     "addToCart": "Ajouter au panier",
+    "addingToCart": "Ajout…",
     "shippingTitle": "Livraison 24 h",
     "returnsTitle": "Retour 30 j",
     "shieldTitle": "Skoleom Shield",

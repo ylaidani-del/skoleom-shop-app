@@ -3,8 +3,8 @@ import { DrawerActions } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import { useCart } from '@/api/cart';
 import { PALETTES } from '@/constants/theme';
-import { useCartStore } from '@/store/cartStore';
 import { useThemeStore } from '@/store/themeStore';
 
 interface ScreenHeaderProps {
@@ -14,7 +14,7 @@ interface ScreenHeaderProps {
 export function ScreenHeader({ title }: ScreenHeaderProps) {
   const router = useRouter();
   const navigation = useNavigation();
-  const cartCount = useCartStore((state) => state.totalCount());
+  const cartCount = useCart().data?.item_count ?? 0;
   const mode = useThemeStore((state) => state.mode);
   const setMode = useThemeStore((state) => state.setMode);
   const fg = PALETTES[mode].fg;

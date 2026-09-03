@@ -14,10 +14,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAddCartItem } from '@/api/cart';
 import { isTestableProduct, useProduct } from '@/api/product';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { PALETTES } from '@/constants/theme';
-import { useCartStore } from '@/store/cartStore';
 import { useFavoritesStore } from '@/store/favoritesStore';
 import { useThemeStore } from '@/store/themeStore';
 import { formatPrice } from '@/utils/currency';
@@ -42,7 +42,7 @@ export default function ProduitScreen() {
   const { data: product, isLoading, isError } = useProduct(id);
   const isFavorite = useFavoritesStore((state) => state.isFavorite(id));
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
-  const addToCart = useCartStore((state) => state.addItem);
+  const addToCart = useAddCartItem();
 
   const [activeImage, setActiveImage] = useState(0);
 
@@ -199,11 +199,11 @@ export default function ProduitScreen() {
               />
             )}
             <Pressable
-              onPress={() => addToCart(product.id)}
-              disabled={!product.inStock}
+              onPress={() => addToCart.mutate({ id: product.id })}
+              disabled={!product.inStock || addToCart.isPending}
               className="items-center rounded-xl border-[1.5px] border-app-border-2 bg-app-surface py-3.5 disabled:opacity-40">
               <Text className="text-[14px] font-semibold text-app-fg">
-                {t('produit.addToCart')}
+                {addToCart.isPending ? t('produit.addingToCart') : t('produit.addToCart')}
               </Text>
             </Pressable>
           </View>

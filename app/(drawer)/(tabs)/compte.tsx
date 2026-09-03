@@ -7,6 +7,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View 
 
 import { useGetUserAvatar } from '@/api/avatar';
 import { useCancelSubscription, useCheckout, useSubscription } from '@/api/billing';
+import { useCart } from '@/api/cart';
 import { useProduct } from '@/api/product';
 import { useMe, useSignOut, useUpdateProfile } from '@/api/user';
 import { useRecommendations } from '@/api/tryon';
@@ -15,7 +16,6 @@ import { ScreenHeader } from '@/components/shop/ScreenHeader';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { LinearGradient } from '@/components/ui/LinearGradient';
 import { PALETTES } from '@/constants/theme';
-import { useCartStore } from '@/store/cartStore';
 import { useFavoritesStore } from '@/store/favoritesStore';
 import { useThemeStore } from '@/store/themeStore';
 
@@ -52,7 +52,7 @@ export default function CompteTab() {
   const checkout = useCheckout();
   const cancelSubscription = useCancelSubscription();
 
-  const cartCount = useCartStore((state) => state.totalCount());
+  const cartCount = useCart().data?.item_count ?? 0;
   const favoritesCount = useFavoritesStore((state) => state.ids.length);
 
   const { data: recommendations } = useRecommendations();

@@ -12,6 +12,12 @@ if (!BASE_URL) {
   throw new Error('Missing EXPO_PUBLIC_BACKEND_URL environment variable');
 }
 
+const SESYNC_BASE_URL = process.env.EXPO_PUBLIC_SESYNC_URL;
+
+if (!SESYNC_BASE_URL) {
+  throw new Error('Missing EXPO_PUBLIC_SESYNC_URL environment variable');
+}
+
 
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -35,9 +41,9 @@ function refreshTokenOnce(): Promise<boolean> {
 
 let redirecting = false;
 
-const createAxiosInstance = () => {
+const createAxiosInstance = (baseURL: string) => {
   const instance = axios.create({
-    baseURL: BASE_URL,
+    baseURL,
     headers: { 'Content-Type': 'application/json' },
     withCredentials: true, // sends the httpOnly auth cookies on every request
     timeout: 30_000,
@@ -92,8 +98,8 @@ const createAxiosInstance = () => {
   return instance;
 };
 
-const BackRoute = createAxiosInstance();
-const ShopRoute = createAxiosInstance();
-const SesyncRoute = createAxiosInstance();
+const BackRoute = createAxiosInstance(BASE_URL);
+const ShopRoute = createAxiosInstance(BASE_URL);
+const SesyncRoute = createAxiosInstance(SESYNC_BASE_URL);
 
 export { BackRoute, ShopRoute, SesyncRoute };

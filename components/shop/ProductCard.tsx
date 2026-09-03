@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Image, Pressable, Text, View } from 'react-native';
 
+import { useAddCartItem } from '@/api/cart';
 import { type WooProduct } from '@/api/product';
 import { PALETTES } from '@/constants/theme';
-import { useCartStore } from '@/store/cartStore';
 import { useFavoritesStore } from '@/store/favoritesStore';
 import { useThemeStore } from '@/store/themeStore';
 import { formatPrice } from '@/utils/currency';
@@ -18,7 +18,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
   const { t } = useTranslation();
   const isFavorite = useFavoritesStore((state) => state.isFavorite(product.id));
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
-  const addToCart = useCartStore((state) => state.addItem);
+  const addToCart = useAddCartItem();
   const palette = PALETTES[useThemeStore((state) => state.mode)];
 
   const cover = product.photos[0];
@@ -90,8 +90,8 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
             )}
           </View>
           <Pressable
-            onPress={() => addToCart(product.id)}
-            disabled={!product.inStock}
+            onPress={() => addToCart.mutate({ id: product.id })}
+            disabled={!product.inStock || addToCart.isPending}
             hitSlop={8}
             className="h-[26px] w-[26px] items-center justify-center rounded-full bg-app-inv disabled:opacity-30"
             accessibilityRole="button"
