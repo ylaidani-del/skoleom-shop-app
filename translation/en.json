@@ -122,6 +122,8 @@
     "cardPayment": "Pay by card",
     "cardPaymentBody": "You'll be redirected to a secure payment page to complete your purchase.",
     "paymentError": "Couldn't start the payment. Please try again.",
+    "paymentFailed": "Payment wasn't completed. You can try again.",
+    "tryAgain": "Try again",
     "payNow": "Pay now",
     "redirecting": "Redirecting…",
     "confirming": "Confirming your payment…",

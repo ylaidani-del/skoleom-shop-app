@@ -122,6 +122,8 @@
     "cardPayment": "Payer par carte",
     "cardPaymentBody": "Vous serez redirigé vers une page de paiement sécurisée pour finaliser votre achat.",
     "paymentError": "Impossible de démarrer le paiement. Réessayez.",
+    "paymentFailed": "Le paiement n'a pas abouti. Vous pouvez réessayer.",
+    "tryAgain": "Réessayer",
     "payNow": "Payer maintenant",
     "redirecting": "Redirection…",
     "confirming": "Confirmation du paiement…",
