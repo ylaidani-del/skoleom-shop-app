@@ -102,4 +102,4 @@ const BackRoute = createAxiosInstance(BASE_URL);
 const ShopRoute = createAxiosInstance(BASE_URL);
 const SesyncRoute = createAxiosInstance(SESYNC_BASE_URL);
 
-export { BackRoute, ShopRoute, SesyncRoute };
+export { BackRoute, ShopRoute, SesyncRoute, SESYNC_BASE_URL };

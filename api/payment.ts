@@ -1,27 +1,14 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 
-import { SesyncRoute } from './MyAxios';
+import { SESYNC_BASE_URL, SesyncRoute } from './MyAxios';
 
 /* ─────────────────────────────────────────────
    Types
 ───────────────────────────────────────────── */
 
-export interface CheckoutSession {
-  sessionId?: string;
-  url?: string;
-  clientSecret?: string;
-  [key: string]: unknown;
-}
-
 export interface PaymentIntent {
   clientSecret: string;
-  paymentIntentId?: string;
-  [key: string]: unknown;
-}
-
-export interface ConfirmPaymentPayload {
-  sessionId?: string;
-  paymentIntentId?: string;
+  amount: number;
   [key: string]: unknown;
 }
 
@@ -35,26 +22,30 @@ const unwrap = <T>(payload: unknown): T =>
     ? (payload as { data: T }).data
     : payload) as T;
 
+// A Stripe client secret is "pi_<id>_secret_<key>" — the id alone is the
+// PaymentIntent id `/confirm` expects.
+export const paymentIntentIdFromClientSecret = (clientSecret: string): string =>
+  clientSecret.split('_secret_')[0];
+
+// `/api/payment/popup` is not a JSON endpoint — verified live: it serves a
+// full standalone HTML page (Stripe Elements card form + Apple/Google Pay
+// Express Checkout) reading `clientSecret`/`amount` from the query string.
+// It's meant to be opened in a browser, not fetched — hence a URL builder
+// instead of a query hook.
+export const getPaymentPopupUrl = (clientSecret: string, amount?: number): string => {
+  const params = new URLSearchParams({ clientSecret });
+  if (amount !== undefined) params.set('amount', String(amount));
+  return `${SESYNC_BASE_URL}/api/payment/popup?${params.toString()}`;
+};
+
 /* ─────────────────────────────────────────────
    Cart checkout (one-off payments)
 ───────────────────────────────────────────── */
 
-export interface CreateCheckoutSessionPayload {
-  cartKey: string;
-  [key: string]: unknown;
-}
-
-// Hosted Stripe Checkout — redirect the user to `session.url` (WebBrowser.openBrowserAsync)
-// and rely on `/api/payment/success` + the Stripe webhook to settle the order.
-export const useCreateCheckoutSession = () =>
-  useMutation<CheckoutSession, Error, CreateCheckoutSessionPayload>({
-    mutationFn: async (payload) => {
-      const { data } = await SesyncRoute.post('/api/payment/create-checkout-session', payload);
-      return unwrap<CheckoutSession>(data);
-    },
-  });
-
-// Native in-app payment sheet flow — returns a PaymentIntent client secret scoped to one cart.
+// Creates a Stripe PaymentIntent scoped to one cart. The card is then
+// collected via the hosted popup page (`getPaymentPopupUrl`) opened in an
+// in-app browser — there's no native Stripe SDK in this app, so the popup's
+// own Stripe Elements form is what actually takes the card.
 export const useCreatePaymentIntent = () =>
   useMutation<PaymentIntent, Error, { cartKey: string }>({
     mutationFn: async ({ cartKey }) => {
@@ -63,38 +54,26 @@ export const useCreatePaymentIntent = () =>
     },
   });
 
+// Asks the backend to check the PaymentIntent's live status with Stripe.
+// Verified live: this returns a bare boolean body (not `{ success: true }`),
+// so a truthy check on the raw response — not property access — is correct.
 export const useConfirmPayment = () =>
-  useMutation<unknown, Error, ConfirmPaymentPayload>({
+  useMutation<boolean, Error, { paymentIntentId: string }>({
     mutationFn: async (payload) => {
       const { data } = await SesyncRoute.post('/api/payment/confirm', payload);
-      return unwrap(data);
+      return data === true || data === 'true';
     },
-  });
-
-export const usePaymentPopup = (options?: { enabled?: boolean }) =>
-  useQuery<Record<string, unknown>>({
-    queryKey: ['payment', 'popup'],
-    queryFn: async () => {
-      const { data } = await SesyncRoute.get('/api/payment/popup');
-      return unwrap(data);
-    },
-    enabled: options?.enabled ?? false,
-  });
-
-export const usePaymentSuccess = (options?: { enabled?: boolean }) =>
-  useQuery<Record<string, unknown>>({
-    queryKey: ['payment', 'success'],
-    queryFn: async () => {
-      const { data } = await SesyncRoute.get('/api/payment/success');
-      return unwrap(data);
-    },
-    enabled: options?.enabled ?? false,
-    retry: false,
   });
 
 /* ─────────────────────────────────────────────
    Subscriptions
 ───────────────────────────────────────────── */
+
+export interface CheckoutSession {
+  sessionId?: string;
+  url?: string;
+  [key: string]: unknown;
+}
 
 export const useSubscriptionCheckout = () =>
   useMutation<CheckoutSession, Error, Record<string, unknown> | void>({
@@ -102,16 +81,6 @@ export const useSubscriptionCheckout = () =>
       const { data } = await SesyncRoute.post('/api/payment/subscriptions/checkout', payload ?? {});
       return unwrap<CheckoutSession>(data);
     },
-  });
-
-export const useSubscriptionPopup = (options?: { enabled?: boolean }) =>
-  useQuery<Record<string, unknown>>({
-    queryKey: ['payment', 'subscription-popup'],
-    queryFn: async () => {
-      const { data } = await SesyncRoute.get('/api/payment/subscription-popup');
-      return unwrap(data);
-    },
-    enabled: options?.enabled ?? false,
   });
 
 export const useCancelPaymentSubscription = () =>

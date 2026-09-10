@@ -8,12 +8,19 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cartKeys, useCart } from '@/api/cart';
-import { useCreateCheckoutSession, usePaymentSuccess } from '@/api/payment';
+import {
+  getPaymentPopupUrl,
+  paymentIntentIdFromClientSecret,
+  useConfirmPayment,
+  useCreatePaymentIntent,
+} from '@/api/payment';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { PALETTES } from '@/constants/theme';
 import { useCartKeyStore } from '@/store/cartKeyStore';
 import { useThemeStore } from '@/store/themeStore';
 import { formatPrice } from '@/utils/currency';
+
+type Phase = 'idle' | 'opening' | 'confirming' | 'success' | 'failed';
 
 export default function PaymentScreen() {
   const { t } = useTranslation();
@@ -24,58 +31,62 @@ export default function PaymentScreen() {
 
   const cartKey = useCartKeyStore((state) => state.cartKey);
   const { data: cart, isLoading } = useCart();
-  const createCheckoutSession = useCreateCheckoutSession();
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
-  const { data: confirmation, isFetching: isConfirming } = usePaymentSuccess({
-    enabled: awaitingConfirmation,
-  });
+  const createPaymentIntent = useCreatePaymentIntent();
+  const confirmPayment = useConfirmPayment();
+  const [phase, setPhase] = useState<Phase>('idle');
 
   const totals = cart?.totals;
+  const isBusy = phase === 'opening' || phase === 'confirming';
 
+  // The card is collected by Stripe's own hosted popup page (no native Stripe
+  // SDK in this app), opened in an in-app browser. Once it closes — whether
+  // the user paid or gave up — the backend is the source of truth for what
+  // actually happened, via /payment/confirm's live Stripe status check.
   const handlePay = () => {
     if (!cartKey) return;
-    createCheckoutSession.mutate(
+    setPhase('opening');
+    createPaymentIntent.mutate(
       { cartKey },
       {
-        onSuccess: async (session) => {
-          if (!session.url) return;
-          await WebBrowser.openBrowserAsync(session.url);
-          setAwaitingConfirmation(true);
-          queryClient.invalidateQueries({ queryKey: cartKeys.detail(cartKey) });
+        onSuccess: async (intent) => {
+          await WebBrowser.openBrowserAsync(getPaymentPopupUrl(intent.clientSecret, intent.amount));
+          setPhase('confirming');
+          confirmPayment.mutate(
+            { paymentIntentId: paymentIntentIdFromClientSecret(intent.clientSecret) },
+            {
+              onSuccess: (paid) => {
+                if (paid) {
+                  setPhase('success');
+                  queryClient.invalidateQueries({ queryKey: cartKeys.detail(cartKey) });
+                } else {
+                  setPhase('failed');
+                }
+              },
+              onError: () => setPhase('failed'),
+            }
+          );
         },
+        onError: () => setPhase('idle'),
       }
     );
   };
 
-  if (awaitingConfirmation) {
+  if (phase === 'success') {
     return (
       <View
         className="flex-1 items-center justify-center gap-4 bg-app-bg px-6"
         style={{ paddingTop: insets.top }}>
-        {isConfirming ? (
-          <>
-            <ActivityIndicator color={palette.fg} />
-            <Text className="text-[13px] text-app-fg-2">{t('checkout.confirming')}</Text>
-          </>
-        ) : (
-          <>
-            <View className="h-16 w-16 items-center justify-center rounded-full bg-brand-green/15">
-              <Ionicons name="checkmark" size={28} color="#16a34a" />
-            </View>
-            <Text className="text-[17px] font-semibold text-app-fg">
-              {t('checkout.successTitle')}
-            </Text>
-            <Text className="max-w-[260px] text-center text-[12.5px] leading-[1.5] text-app-fg-2">
-              {typeof confirmation?.message === 'string'
-                ? confirmation.message
-                : t('checkout.successBody')}
-            </Text>
-            <GradientButton
-              label={t('checkout.backToShop')}
-              onPress={() => router.replace('/(drawer)/(tabs)/cataloge')}
-            />
-          </>
-        )}
+        <View className="h-16 w-16 items-center justify-center rounded-full bg-brand-green/15">
+          <Ionicons name="checkmark" size={28} color="#16a34a" />
+        </View>
+        <Text className="text-[17px] font-semibold text-app-fg">{t('checkout.successTitle')}</Text>
+        <Text className="max-w-[260px] text-center text-[12.5px] leading-[1.5] text-app-fg-2">
+          {t('checkout.successBody')}
+        </Text>
+        <GradientButton
+          label={t('checkout.backToShop')}
+          onPress={() => router.replace('/(drawer)/(tabs)/cataloge')}
+        />
       </View>
     );
   }
@@ -137,16 +148,27 @@ export default function PaymentScreen() {
             </Text>
           </View>
 
-          {createCheckoutSession.isError && (
+          {createPaymentIntent.isError && (
             <Text className="text-[12px] text-red-500">{t('checkout.paymentError')}</Text>
+          )}
+          {phase === 'failed' && (
+            <Text className="text-[12px] text-red-500">{t('checkout.paymentFailed')}</Text>
           )}
         </ScrollView>
       )}
 
       <View className="gap-2 border-t border-app-border bg-app-surface px-4 pb-6 pt-3">
         <GradientButton
-          label={createCheckoutSession.isPending ? t('checkout.redirecting') : t('checkout.payNow')}
-          disabled={!cartKey || createCheckoutSession.isPending}
+          label={
+            phase === 'opening'
+              ? t('checkout.redirecting')
+              : phase === 'confirming'
+                ? t('checkout.confirming')
+                : phase === 'failed'
+                  ? t('checkout.tryAgain')
+                  : t('checkout.payNow')
+          }
+          disabled={!cartKey || isBusy}
           onPress={handlePay}
         />
       </View>

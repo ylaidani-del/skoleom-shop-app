@@ -27,7 +27,7 @@ import { PALETTES } from '@/constants/theme';
 import { useThemeStore } from '@/store/themeStore';
 import { formatPrice } from '@/utils/currency';
 
-const toAmount = (value: string | undefined) => Number(value ?? 0) || 0;
+const toAmount = (value: number | string | undefined) => Number(value ?? 0) || 0;
 
 function CartLineRow({ item }: { item: CartItem }) {
   const { t } = useTranslation();
@@ -231,11 +231,11 @@ export default function PanierTab() {
               </Text>
             </View>
           )}
-          {toAmount(totals?.tax_total) > 0 && (
+          {toAmount(totals?.total_tax) > 0 && (
             <View className="flex-row justify-between">
               <Text className="text-[12.5px] text-app-fg-2">{t('panier.vat')}</Text>
               <Text className="text-[12.5px] font-medium text-app-fg">
-                {formatPrice(toAmount(totals?.tax_total))}
+                {formatPrice(toAmount(totals?.total_tax))}
               </Text>
             </View>
           )}

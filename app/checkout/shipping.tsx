@@ -2,15 +2,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  dedupeShippingMethods,
   useEkanMethods,
   useRelayPoints,
-  useShippingZones,
+  useShippingMethods,
   useUpdateCart,
-  useZoneShippingMethods,
   type EkanMethod,
   type RelayPoint,
   type ShippingMethod,
@@ -25,12 +32,21 @@ const isRelayLike = (label: string) => /relay|stop\s?desk|point/i.test(label);
 interface SelectableRowProps {
   title: string;
   subtitle?: string;
-  cost?: string;
+  cost?: number;
+  costIsEstimate?: boolean;
   selected: boolean;
   onPress: () => void;
 }
 
-function SelectableRow({ title, subtitle, cost, selected, onPress }: SelectableRowProps) {
+function SelectableRow({
+  title,
+  subtitle,
+  cost,
+  costIsEstimate,
+  selected,
+  onPress,
+}: SelectableRowProps) {
+  const { t } = useTranslation();
   const palette = PALETTES[useThemeStore((state) => state.mode)];
   return (
     <Pressable
@@ -48,8 +64,14 @@ function SelectableRow({ title, subtitle, cost, selected, onPress }: SelectableR
         <Text className="text-[13px] font-semibold text-app-fg">{title}</Text>
         {!!subtitle && <Text className="text-[11px] text-app-fg-3">{subtitle}</Text>}
       </View>
-      {!!cost && (
-        <Text className="text-[13px] font-bold text-app-fg">{formatPrice(Number(cost) || 0)}</Text>
+      {cost !== undefined && (
+        <Text className="text-[13px] font-bold text-app-fg">
+          {cost === 0
+            ? t('checkout.free')
+            : costIsEstimate
+              ? t('checkout.costFrom', { price: formatPrice(cost) })
+              : formatPrice(cost)}
+        </Text>
       )}
     </Pressable>
   );
@@ -61,33 +83,36 @@ export default function ShippingScreen() {
   const insets = useSafeAreaInsets();
   const palette = PALETTES[useThemeStore((state) => state.mode)];
 
-  const { data: zones, isLoading: zonesLoading } = useShippingZones();
-  const [zoneId, setZoneId] = useState<number | string | undefined>();
-  const { data: zoneMethods, isLoading: methodsLoading } = useZoneShippingMethods(zoneId);
+  const { data: shippingMethods, isLoading: methodsLoading } = useShippingMethods();
   const { data: ekanMethods } = useEkanMethods();
-  const { data: relayPoints, isLoading: relayLoading } = useRelayPoints();
 
   const [methodId, setMethodId] = useState<string | undefined>();
   const [relayId, setRelayId] = useState<string | undefined>();
+  const [postcode, setPostcode] = useState('');
 
   const updateCart = useUpdateCart();
 
   const methods: (ShippingMethod | EkanMethod)[] = useMemo(
-    () => [...(ekanMethods ?? []), ...(zoneMethods ?? [])],
-    [ekanMethods, zoneMethods]
+    () => [...(ekanMethods ?? []), ...dedupeShippingMethods(shippingMethods ?? [])],
+    [ekanMethods, shippingMethods]
   );
 
   const selectedMethod = methods.find((m) => m.id === methodId);
   const requiresRelay = !!selectedMethod && isRelayLike(selectedMethod.title);
+
+  const { data: relayPoints, isLoading: relayLoading } = useRelayPoints(
+    requiresRelay ? { postcode: postcode.trim() } : undefined
+  );
+
   const canContinue = !!methodId && (!requiresRelay || !!relayId);
 
   const handleContinue = () => {
     updateCart.mutate(
       {
         shipping: {
-          zone_id: zoneId,
           method_id: methodId,
           relay_point_id: requiresRelay ? relayId : undefined,
+          postcode: requiresRelay ? postcode.trim() : undefined,
         },
       },
       { onSuccess: () => router.push('/checkout/payment') }
@@ -111,44 +136,12 @@ export default function ShippingScreen() {
         showsVerticalScrollIndicator={false}>
         <View className="gap-2.5">
           <Text className="text-[12px] font-semibold uppercase tracking-wide text-app-fg-3">
-            {t('checkout.zoneLabel')}
-          </Text>
-          {zonesLoading ? (
-            <ActivityIndicator color={palette.fg} />
-          ) : (
-            <View className="flex-row flex-wrap gap-2">
-              {(zones ?? []).map((zone) => (
-                <Pressable
-                  key={zone.id}
-                  onPress={() => {
-                    setZoneId(zone.id);
-                    setMethodId(undefined);
-                  }}
-                  className={`rounded-full border px-3.5 py-2 ${
-                    zoneId === zone.id
-                      ? 'border-app-inv bg-app-inv'
-                      : 'border-app-border bg-app-surface'
-                  }`}>
-                  <Text
-                    className={`text-[12px] font-medium ${
-                      zoneId === zone.id ? 'text-app-inv-fg' : 'text-app-fg'
-                    }`}>
-                    {zone.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View className="gap-2.5">
-          <Text className="text-[12px] font-semibold uppercase tracking-wide text-app-fg-3">
             {t('checkout.methodLabel')}
           </Text>
           {methodsLoading ? (
             <ActivityIndicator color={palette.fg} />
           ) : methods.length === 0 ? (
-            <Text className="text-[12.5px] text-app-fg-3">{t('checkout.selectZoneFirst')}</Text>
+            <Text className="text-[12.5px] text-app-fg-3">{t('checkout.noMethods')}</Text>
           ) : (
             <View className="gap-2">
               {methods.map((method) => (
@@ -156,8 +149,14 @@ export default function ShippingScreen() {
                   key={method.id}
                   title={method.title}
                   cost={method.cost}
+                  costIsEstimate={
+                    'costIsEstimate' in method ? Boolean(method.costIsEstimate) : undefined
+                  }
                   selected={methodId === method.id}
-                  onPress={() => setMethodId(method.id)}
+                  onPress={() => {
+                    setMethodId(method.id);
+                    setRelayId(undefined);
+                  }}
                 />
               ))}
             </View>
@@ -169,8 +168,25 @@ export default function ShippingScreen() {
             <Text className="text-[12px] font-semibold uppercase tracking-wide text-app-fg-3">
               {t('checkout.relayLabel')}
             </Text>
-            {relayLoading ? (
+            <View className="h-11 justify-center rounded-xl border border-app-border bg-app-surface px-3.5">
+              <TextInput
+                value={postcode}
+                onChangeText={(value) => {
+                  setPostcode(value);
+                  setRelayId(undefined);
+                }}
+                placeholder={t('checkout.postcodePlaceholder')}
+                placeholderTextColor={palette.fg3}
+                keyboardType="number-pad"
+                className="text-[12.5px] text-app-fg"
+              />
+            </View>
+            {!postcode.trim() ? (
+              <Text className="text-[12px] text-app-fg-3">{t('checkout.enterPostcode')}</Text>
+            ) : relayLoading ? (
               <ActivityIndicator color={palette.fg} />
+            ) : (relayPoints ?? []).length === 0 ? (
+              <Text className="text-[12px] text-app-fg-3">{t('checkout.noRelayPoints')}</Text>
             ) : (
               <View className="gap-2">
                 {(relayPoints ?? []).map((point: RelayPoint) => (
