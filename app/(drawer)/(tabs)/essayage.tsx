@@ -608,15 +608,32 @@ export default function EssayageTab() {
           />
           {tryOn.data && selectedProduct && (
             <Pressable
-              onPress={() => addToCart.mutate({ id: selectedProduct.id })}
+              onPress={() =>
+                // Clothing is often a variable product (size/color) that this compact bar
+                // can't pick for you — a failed add routes to the product page instead.
+                addToCart.isError
+                  ? router.push(`/produit/${selectedProduct.id}`)
+                  : addToCart.mutate({ productId: selectedProduct.id, quantity: 1 })
+              }
               disabled={addToCart.isPending}
               className="items-center justify-center rounded-xl bg-app-inv px-5 disabled:opacity-50">
               <Text className="text-[13.5px] font-semibold text-app-inv-fg">
-                {t('essayage.addToCart')}
+                {addToCart.isPending
+                  ? t('essayage.addingToCart')
+                  : addToCart.isSuccess
+                    ? t('essayage.addedToCart')
+                    : addToCart.isError
+                      ? t('essayage.selectOptions')
+                      : t('essayage.addToCart')}
               </Text>
             </Pressable>
           )}
         </View>
+        {addToCart.isError && (
+          <Text className="text-center text-[11.5px] text-red-500">
+            {t('essayage.addToCartError')}
+          </Text>
+        )}
       </View>
     </Container>
   );

@@ -22,7 +22,7 @@ if (vexoApiKey) {
 }
 
 export const unstable_settings = {
-  initialRouteName: '(drawer)/(tabs)/index',
+  initialRouteName: '(drawer)',
 };
 
 SplashScreen.preventAutoHideAsync();

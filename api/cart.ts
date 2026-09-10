@@ -86,15 +86,28 @@ const storeCart = (cart: Cart) => {
   return cart;
 };
 
-// Ensures a CoCart session exists before an item is added, so callers never
-// have to create the cart themselves before their first "add to cart".
-async function ensureCartKey(): Promise<string> {
-  const existing = useCartKeyStore.getState().cartKey;
-  if (existing) return existing;
-
+// Single source of truth for creating a CoCart session — every other helper
+// that needs a fresh cart goes through this instead of calling the endpoint itself.
+async function createCart(): Promise<Cart> {
   const { data } = await SesyncRoute.post('/api/cart/create');
   const cart = unwrap<Cart>(data);
   storeCart(cart);
+  return cart;
+}
+
+// Ensures a CoCart session exists before an item is added, so callers never
+// have to create the cart themselves before their first "add to cart".
+//
+// Note: the Sesync backend never 404s on an unknown cart_key — POSTing to
+// `/cart/{anything}/items/add` silently adopts/creates a session under that
+// key. So a "retry with a fresh cart on error" strategy was tried and dropped:
+// a 500 here is a deterministic business error (e.g. a variable product added
+// without a variation), not a stale session, and swapping in a new empty cart
+// on every such error would silently orphan whatever was already in the cart.
+async function ensureCartKey(): Promise<string> {
+  const existing = useCartKeyStore.getState().cartKey;
+  if (existing) return existing;
+  const cart = await createCart();
   return cart.cart_key;
 }
 
@@ -123,14 +136,8 @@ export const cartKeys = {
 export const useCreateCart = () => {
   const qc = useQueryClient();
   return useMutation<Cart, Error, void>({
-    mutationFn: async () => {
-      const { data } = await SesyncRoute.post('/api/cart/create');
-      return unwrap<Cart>(data);
-    },
-    onSuccess: (cart) => {
-      storeCart(cart);
-      qc.setQueryData(cartKeys.detail(cart.cart_key), cart);
-    },
+    mutationFn: createCart,
+    onSuccess: (cart) => qc.setQueryData(cartKeys.detail(cart.cart_key), cart),
   });
 };
 
@@ -181,7 +188,7 @@ export const useLinkCustomer = () => {
 ───────────────────────────────────────────── */
 
 export interface AddCartItemPayload {
-  id: number | string;
+  productId: number | string;
   quantity?: number;
   variation?: Record<string, string>;
 }
@@ -189,9 +196,13 @@ export interface AddCartItemPayload {
 export const useAddCartItem = () => {
   const qc = useQueryClient();
   return useMutation<Cart, Error, AddCartItemPayload>({
-    mutationFn: async (payload) => {
+    mutationFn: async ({ productId, quantity, variation }) => {
       const cartKey = await ensureCartKey();
-      const { data } = await SesyncRoute.post(`/api/cart/${cartKey}/items/add`, payload);
+      const { data } = await SesyncRoute.post(`/api/cart/${cartKey}/items/add`, {
+        productId,
+        quantity: quantity ?? 1,
+        ...(variation ? { variation } : {}),
+      });
       return unwrap<Cart>(data);
     },
     onSuccess: (cart) => {

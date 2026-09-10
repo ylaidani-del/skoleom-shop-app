@@ -10,6 +10,14 @@ export interface WooTaxonomyRef {
   parent?: number;
 }
 
+export interface RawVariationAttribute {
+  id?: number;
+  name: string;
+  slug?: string;
+  variation?: boolean;
+  options?: string[];
+}
+
 export interface BackendProduct {
   id: number;
   title: string;
@@ -27,6 +35,14 @@ export interface BackendProduct {
   tags: unknown[];
   images: string[];
   featured_image: string;
+  /** WooCommerce product type: 'simple' | 'variable' | 'external' | 'grouped'. Only the
+   * single-product endpoint returns this — list responses omit it, so it's undefined there. */
+  type?: string;
+  external_url?: string;
+  button_text?: string;
+  purchasable?: boolean;
+  /** Variation-defining attributes (e.g. size, weight) — only set for variable products. */
+  variationAttributes?: { name: string; slug?: string; options: string[] }[];
 }
 
 export interface BackendProductsResponse {
@@ -84,7 +100,19 @@ export interface WooProduct {
   fabric?: string;
   createdAt: string;
   updatedAt: string;
+  /** WooCommerce product type ('simple' | 'variable' | 'external' | ...). Defaults to
+   * 'simple' when the source endpoint doesn't report it (e.g. the catalogue list). */
+  productType: string;
+  purchasable: boolean;
+  buttonText?: string;
+  variationAttributes?: { name: string; slug?: string; options: string[] }[];
 }
+
+export const isVariableProduct = (product: WooProduct): boolean =>
+  product.productType === 'variable';
+
+export const isExternalProduct = (product: WooProduct): boolean =>
+  product.productType === 'external' || (!product.purchasable && !!product.external_url);
 
 export interface ProductPage {
   items: WooProduct[];
@@ -151,20 +179,60 @@ const mapProduct = (p: BackendProduct): WooProduct => {
     fabric: '',
     createdAt: '',
     updatedAt: '',
+    productType: p.type ?? 'simple',
+    purchasable: p.purchasable ?? true,
+    external_url: p.external_url,
+    buttonText: p.button_text,
+    variationAttributes: p.variationAttributes,
   };
 };
 
-export const useProductVariations = (id: string) => {
-  const { data, isLoading, isError, error } = useQuery({
+export interface VariationAttributeValue {
+  name: string;
+  slug?: string;
+  option: string;
+}
+
+export interface ProductVariation {
+  id: number;
+  price: number;
+  regularPrice: number;
+  salePrice: number;
+  onSale: boolean;
+  inStock: boolean;
+  image?: string;
+  attributes: VariationAttributeValue[];
+}
+
+const mapVariation = (v: Record<string, unknown>): ProductVariation => ({
+  id: v.id as number,
+  price: toNumber(v.price),
+  regularPrice: toNumber(v.regular_price ?? v.price),
+  salePrice: toNumber(v.sale_price),
+  onSale: !!v.on_sale,
+  inStock:
+    typeof v.stock_status === 'string'
+      ? v.stock_status === 'instock'
+      : ((v.stock_quantity as number) ?? 0) > 0,
+  image: (v.image as { src?: string } | undefined)?.src,
+  attributes: ((v.attributes as Record<string, unknown>[]) ?? []).map((a) => ({
+    name: a.name as string,
+    slug: a.slug as string | undefined,
+    option: a.option as string,
+  })),
+});
+
+export const useProductVariations = (id: string, options?: { enabled?: boolean }) =>
+  useQuery<ProductVariation[]>({
     queryKey: ['product-variations', id],
     queryFn: async () => {
       const { data } = await ShopRoute.get(`/products/${id}/variations`);
-      return data;
+      const raw = (Array.isArray(data) ? data : (data?.data ?? [])) as Record<string, unknown>[];
+      return raw.map(mapVariation);
     },
-    enabled: !!id,
+    enabled: (options?.enabled ?? true) && !!id,
+    staleTime: 1000 * 60 * 5,
   });
-  return { data, isLoading, isError, error };
-};
 
 export const useProductSearch = (query: string) => {
   const { data, isLoading, isError, error } = useQuery<ProductPage>({
@@ -320,6 +388,13 @@ const normalizeRawProduct = (raw: Record<string, unknown>): BackendProduct => {
     .map((img) => (typeof img === 'string' ? img : (img as { src?: string })?.src))
     .filter((src): src is string => !!src);
 
+  const rawAttributes = Array.isArray(raw.attributes)
+    ? (raw.attributes as RawVariationAttribute[])
+    : [];
+  const variationAttributes = rawAttributes
+    .filter((a) => a.variation && (a.options?.length ?? 0) > 0)
+    .map((a) => ({ name: a.name, slug: a.slug, options: a.options ?? [] }));
+
   return {
     id: raw.id as number,
     title: (raw.title as string) ?? (raw.name as string) ?? '',
@@ -338,6 +413,11 @@ const normalizeRawProduct = (raw: Record<string, unknown>): BackendProduct => {
     tags: (raw.tags as unknown[]) ?? [],
     images: (raw.featured_image as string) ? imageUrls : imageUrls.slice(1),
     featured_image: (raw.featured_image as string) ?? imageUrls[0] ?? '',
+    type: raw.type as string | undefined,
+    external_url: raw.external_url as string | undefined,
+    button_text: raw.button_text as string | undefined,
+    purchasable: typeof raw.purchasable === 'boolean' ? raw.purchasable : undefined,
+    variationAttributes: variationAttributes.length > 0 ? variationAttributes : undefined,
   };
 };
 

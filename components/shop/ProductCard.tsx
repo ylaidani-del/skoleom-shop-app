@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 
 import { useAddCartItem } from '@/api/cart';
 import { type WooProduct } from '@/api/product';
@@ -20,6 +21,12 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const addToCart = useAddCartItem();
   const palette = PALETTES[useThemeStore((state) => state.mode)];
+
+  useEffect(() => {
+    if (!addToCart.isSuccess) return;
+    const timer = setTimeout(() => addToCart.reset(), 1500);
+    return () => clearTimeout(timer);
+  }, [addToCart.isSuccess]);
 
   const cover = product.photos[0];
   const badgeLabel = product.onSale ? 'Promo' : (product.type ?? '');
@@ -90,13 +97,28 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
             )}
           </View>
           <Pressable
-            onPress={() => addToCart.mutate({ id: product.id })}
+            onPress={() =>
+              // The catalogue list doesn't tell us whether a product needs a variation
+              // (size/weight) or is external-only, so a failed quick-add falls back to
+              // the product page, which knows how to handle both cases.
+              addToCart.isError
+                ? onPress?.(product)
+                : addToCart.mutate({ productId: product.id, quantity: 1 })
+            }
             disabled={!product.inStock || addToCart.isPending}
             hitSlop={8}
             className="h-[26px] w-[26px] items-center justify-center rounded-full bg-app-inv disabled:opacity-30"
             accessibilityRole="button"
             accessibilityLabel={t('catalogue.addToCart')}>
-            <Ionicons name="add" size={15} color={palette.invFg} />
+            {addToCart.isPending ? (
+              <ActivityIndicator size="small" color={palette.invFg} />
+            ) : (
+              <Ionicons
+                name={addToCart.isError ? 'options' : addToCart.isSuccess ? 'checkmark' : 'add'}
+                size={15}
+                color={palette.invFg}
+              />
+            )}
           </Pressable>
         </View>
       </View>
