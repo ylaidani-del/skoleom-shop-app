@@ -1,10 +1,23 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
+
 import { BackRoute } from './MyAxios';
-function extractError(err: unknown): string {
-  const axErr = err as AxiosError<{ error?: string }>;
-  return axErr.response?.data?.error ?? `Erreur ${axErr.response?.status ?? ''}`.trim();
+import { USAGE_KEY } from './usage';
+
+export class ApiError extends Error {
+  code?: string;
+  constructor(message: string, code?: string) {
+    super(message);
+    this.code = code;
+  }
 }
+
+function toApiError(err: unknown): ApiError {
+  const axErr = err as AxiosError<{ error?: string; code?: string }>;
+  const message = axErr.response?.data?.error ?? `Erreur ${axErr.response?.status ?? ''}`.trim();
+  return new ApiError(message, axErr.response?.data?.code);
+}
+
 export interface Measurements {
   height: number;
   weight: number;
@@ -23,6 +36,7 @@ export interface Product {
   type: string;
   fabric?: string;
 }
+
 export interface UserAvatarResponse {
   data: {
     avatarId: string;
@@ -54,17 +68,20 @@ export interface CreateAvatarResponse {
 }
 
 export function useCreateAvatar() {
-  return useMutation<CreateAvatarResponse, Error, CreateAvatarInput>({
+  const queryClient = useQueryClient();
+  return useMutation<CreateAvatarResponse, ApiError, CreateAvatarInput>({
     mutationFn: async (input) => {
       try {
         const res = await BackRoute.post<CreateAvatarResponse>(`avatar`, input);
         return res.data;
       } catch (err) {
-        throw new Error(extractError(err));
+        throw toApiError(err);
       }
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [USAGE_KEY] }),
   });
 }
+
 export function useSize(productId: number | undefined, measurements: Measurements) {
   return useQuery({
     queryKey: ['ai-size', productId, measurements],
@@ -98,7 +115,7 @@ export interface UpdateAvatarResponse {
 }
 
 export function useUpdateAvatar() {
-  return useMutation<UpdateAvatarResponse, Error, UpdateAvatarInput>({
+  return useMutation<UpdateAvatarResponse, ApiError, UpdateAvatarInput>({
     mutationFn: async ({ avatarId, measurements }) => {
       try {
         const res = await BackRoute.put<UpdateAvatarResponse>(`avatar/${avatarId}`, {
@@ -106,8 +123,26 @@ export function useUpdateAvatar() {
         });
         return res.data;
       } catch (err) {
-        throw new Error(extractError(err));
+        throw toApiError(err);
       }
+    },
+  });
+}
+
+export function useDeleteAvatar() {
+  const queryClient = useQueryClient();
+  return useMutation<unknown, ApiError, { avatarId: string; userId: number | null }>({
+    mutationFn: async ({ avatarId }) => {
+      try {
+        const res = await BackRoute.delete(`avatar/${avatarId}`);
+        return res.data;
+      } catch (err) {
+        throw toApiError(err);
+      }
+    },
+    onSuccess: (_data, { userId }) => {
+      queryClient.setQueryData(['ai-avatar', 'user', userId], null);
+      queryClient.invalidateQueries({ queryKey: [USAGE_KEY] });
     },
   });
 }
@@ -125,7 +160,7 @@ export function useGetUserAvatar(userId: number | null) {
       } catch (err) {
         const ax = err as AxiosError;
         if (ax.response?.status === 404) return null;
-        throw new Error(extractError(err));
+        throw toApiError(err);
       }
     },
   });

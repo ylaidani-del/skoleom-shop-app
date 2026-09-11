@@ -622,7 +622,10 @@ export default function EssayageTab() {
                 // can't pick for you — a failed add routes to the product page instead.
                 addToCart.isError
                   ? router.push(`/produit/${selectedProduct.id}`)
-                  : addToCart.mutate({ productId: selectedProduct.id, quantity: 1 })
+                  : addToCart.mutate(
+                      { productId: selectedProduct.id, quantity: 1 },
+                      { onSuccess: () => router.push('/(drawer)/(tabs)/panier') }
+                    )
               }
               disabled={addToCart.isPending}
               className="items-center justify-center rounded-xl bg-app-inv px-5 disabled:opacity-50">

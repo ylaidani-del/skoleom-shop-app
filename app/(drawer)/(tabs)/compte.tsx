@@ -1,11 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
-import { useGetUserAvatar } from '@/api/avatar';
+import { useCreateAvatar, useDeleteAvatar, useGetUserAvatar, useUpdateAvatar } from '@/api/avatar';
 import { useCancelSubscription, useCheckout, useSubscription } from '@/api/billing';
 import { useCart } from '@/api/cart';
 import { useProduct } from '@/api/product';
@@ -17,6 +29,7 @@ import { GradientButton } from '@/components/ui/GradientButton';
 import { LinearGradient } from '@/components/ui/LinearGradient';
 import { PALETTES } from '@/constants/theme';
 import { useFavoritesStore } from '@/store/favoritesStore';
+import { useMeasurementsStore, type Measurements } from '@/store/measurementsStore';
 import { useThemeStore } from '@/store/themeStore';
 
 const formatDate = (value: string) =>
@@ -37,16 +50,86 @@ const ROLE_KEYS: Record<string, string> = {
   admin: 'auth.roleAdmin',
 };
 
+const DEFAULT_MEASUREMENTS: Measurements = {
+  height: 170,
+  weight: 70,
+  chest: 95,
+  waist: 80,
+  footLength: 26,
+};
+
+const MEASUREMENT_FIELDS: {
+  key: keyof Measurements;
+  label: string;
+  unit: string;
+  min: number;
+  max: number;
+  step?: number;
+}[] = [
+  { key: 'height', label: 'essayage.heightLabel', unit: 'cm', min: 140, max: 210 },
+  { key: 'weight', label: 'essayage.weightLabel', unit: 'kg', min: 35, max: 150 },
+  { key: 'chest', label: 'essayage.chestLabel', unit: 'cm', min: 60, max: 140 },
+  { key: 'waist', label: 'essayage.waistLabel', unit: 'cm', min: 50, max: 130 },
+  { key: 'footLength', label: 'essayage.footLabel', unit: 'cm', min: 20, max: 32, step: 0.5 },
+];
+
+interface MeasurementSliderProps {
+  label: string;
+  value: number;
+  unit: string;
+  min: number;
+  max: number;
+  step?: number;
+  onValueChange: (value: number) => void;
+}
+
+function MeasurementSlider({
+  label,
+  value,
+  unit,
+  min,
+  max,
+  step = 1,
+  onValueChange,
+}: MeasurementSliderProps) {
+  const palette = PALETTES[useThemeStore((state) => state.mode)];
+  return (
+    <View className="gap-1.5">
+      <View className="flex-row items-center justify-between">
+        <Text className="text-[12px] font-medium text-app-fg-2">{label}</Text>
+        <Text className="text-[12.5px] font-semibold text-app-fg">
+          {step < 1 ? value.toFixed(1) : Math.round(value)} {unit}
+        </Text>
+      </View>
+      <Slider
+        minimumValue={min}
+        maximumValue={max}
+        step={step}
+        value={value}
+        onValueChange={onValueChange}
+        minimumTrackTintColor={palette.fg}
+        maximumTrackTintColor={palette.border}
+        thumbTintColor={palette.fg}
+      />
+    </View>
+  );
+}
+
 export default function CompteTab() {
   const { t } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const palette = PALETTES[useThemeStore((state) => state.mode)];
 
   const { data: me } = useMe();
+  const userId = me?.id ?? null;
   const { mutate: signOut, isPending: isSigningOut } = useSignOut();
   const { mutate: updateProfile, isPending: isSaving } = useUpdateProfile();
-  const { data: avatarResponse } = useGetUserAvatar(me?.id ?? null);
+  const { data: avatarResponse } = useGetUserAvatar(userId);
   const avatar = avatarResponse?.data ?? null;
+  const createAvatar = useCreateAvatar();
+  const updateAvatar = useUpdateAvatar();
+  const deleteAvatar = useDeleteAvatar();
 
   const { data: subscription, isLoading: isSubLoading } = useSubscription();
   const checkout = useCheckout();
@@ -62,6 +145,107 @@ export default function CompteTab() {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+
+  const storedMeasurements = useMeasurementsStore((state) => state.measurements);
+  const setStoredMeasurements = useMeasurementsStore((state) => state.setMeasurements);
+  const [isEditingMeasurements, setIsEditingMeasurements] = useState(false);
+  const [measurements, setMeasurements] = useState<Measurements>(
+    () => storedMeasurements ?? DEFAULT_MEASUREMENTS
+  );
+  const [measurementsSaved, setMeasurementsSaved] = useState(false);
+  const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
+
+  // Seeded directly during render (not in an effect — see essayage.tsx for the
+  // same pattern): if this device has no locally-stored measurements yet but
+  // the server-side avatar does (new device, cleared storage...), fall back
+  // to those instead of showing generic defaults.
+  const [measurementsSeeded, setMeasurementsSeeded] = useState(false);
+  if (!measurementsSeeded && !storedMeasurements && avatar?.measurements) {
+    const m = avatar.measurements;
+    const seeded: Measurements = {
+      height: Number(m.height) || 0,
+      weight: Number(m.weight) || 0,
+      chest: Number(m.chest) || 0,
+      waist: Number(m.waist) || 0,
+      footLength: Number(m.footLength) || 0,
+    };
+    if (Object.values(seeded).every((value) => value > 0)) {
+      setMeasurementsSeeded(true);
+      setMeasurements(seeded);
+    }
+  }
+
+  const pickAvatarPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      base64: true,
+      quality: 0.6,
+      allowsEditing: true,
+      aspect: [3, 4],
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (asset.base64) setPhoto({ uri: asset.uri, base64: asset.base64 });
+  };
+
+  const canSaveAvatar = !!photo || !!avatar;
+  const isSavingAvatar = createAvatar.isPending || updateAvatar.isPending;
+  const avatarSaveError = createAvatar.error ?? updateAvatar.error;
+
+  const saveMeasurements = () => {
+    setMeasurementsSaved(false);
+    if (photo) {
+      // A freshly picked photo always (re)creates the avatar — there's one
+      // avatar per user server-side, so this transparently replaces any
+      // existing one with the new photo + current measurements.
+      createAvatar.mutate(
+        { photoBase64: photo.base64, measurements },
+        {
+          onSuccess: () => {
+            setStoredMeasurements(measurements);
+            setMeasurementsSaved(true);
+            setPhoto(null);
+            queryClient.invalidateQueries({ queryKey: ['ai-avatar', 'user', userId] });
+          },
+        }
+      );
+    } else if (avatar) {
+      updateAvatar.mutate(
+        { avatarId: avatar.avatarId, measurements },
+        {
+          onSuccess: () => {
+            setStoredMeasurements(measurements);
+            setMeasurementsSaved(true);
+            queryClient.invalidateQueries({ queryKey: ['ai-avatar', 'user', userId] });
+          },
+        }
+      );
+    } else {
+      setStoredMeasurements(measurements);
+      setMeasurementsSaved(true);
+    }
+  };
+
+  const removeAvatar = () => {
+    if (!avatar) return;
+    Alert.alert(
+      t('compte.removeAvatarConfirmTitle'),
+      t('compte.removeAvatarConfirmBody'),
+      [
+        { text: t('compte.cancel'), style: 'cancel' },
+        {
+          text: t('compte.removeAvatar'),
+          style: 'destructive',
+          onPress: () => {
+            deleteAvatar.mutate({ avatarId: avatar.avatarId, userId });
+            setPhoto(null);
+          },
+        },
+      ]
+    );
+  };
 
   const startEditing = () => {
     setName(me?.name ?? '');
@@ -113,7 +297,7 @@ export default function CompteTab() {
                 </View>
               </View>
               <Pressable
-                onPress={() => router.push('/(drawer)/(tabs)/essayage')}
+                onPress={() => setIsEditingMeasurements(true)}
                 hitSlop={6}
                 accessibilityLabel={t('compte.editAvatar')}
                 className="absolute -bottom-0.5 -right-0.5 h-5 w-5 items-center justify-center rounded-full border-2 border-app-surface bg-app-inv">
@@ -171,6 +355,102 @@ export default function CompteTab() {
                   </Text>
                 </Pressable>
               </View>
+            </View>
+          )}
+        </View>
+
+        <View className="gap-3 rounded-2xl border border-app-border bg-app-surface p-4">
+          <Pressable
+            onPress={() => setIsEditingMeasurements((prev) => !prev)}
+            className="flex-row items-center justify-between">
+            <Text className="text-[13px] font-semibold text-app-fg">
+              {t('compte.myAvatarTitle')}
+            </Text>
+            <Ionicons
+              name={isEditingMeasurements ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={palette.fg2}
+            />
+          </Pressable>
+
+          {isEditingMeasurements && (
+            <View className="gap-3.5 border-t border-app-border pt-3.5">
+              <View className="flex-row items-center gap-3">
+                <Pressable
+                  onPress={pickAvatarPhoto}
+                  className="h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-app-fill">
+                  {photo ? (
+                    <Image source={{ uri: photo.uri }} className="h-full w-full" resizeMode="cover" />
+                  ) : avatar?.avatarUrl ? (
+                    <Image
+                      source={{ uri: avatar.avatarUrl }}
+                      className="h-full w-full"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Ionicons name="camera-outline" size={22} color={palette.fg3} />
+                  )}
+                </Pressable>
+                <View className="flex-1 gap-1.5">
+                  <Pressable
+                    onPress={pickAvatarPhoto}
+                    className="self-start rounded-full border border-app-border px-3 py-1.5">
+                    <Text className="text-[12px] font-medium text-app-fg">
+                      {photo
+                        ? t('essayage.retakePhoto')
+                        : avatar
+                          ? t('compte.changePhoto')
+                          : t('essayage.addPhoto')}
+                    </Text>
+                  </Pressable>
+                  {avatar && (
+                    <Pressable onPress={removeAvatar} disabled={deleteAvatar.isPending} hitSlop={6}>
+                      <Text className="text-[11.5px] font-medium text-red-500">
+                        {deleteAvatar.isPending
+                          ? t('compte.removingAvatar')
+                          : t('compte.removeAvatar')}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+
+              {MEASUREMENT_FIELDS.map((field) => (
+                <MeasurementSlider
+                  key={field.key}
+                  label={t(field.label)}
+                  unit={field.unit}
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  value={measurements[field.key]}
+                  onValueChange={(value) => {
+                    setMeasurementsSaved(false);
+                    setMeasurements((prev) => ({ ...prev, [field.key]: value }));
+                  }}
+                />
+              ))}
+
+              {avatarSaveError && (
+                <Text className="text-[12px] text-red-500">{avatarSaveError.message}</Text>
+              )}
+              {deleteAvatar.error && (
+                <Text className="text-[12px] text-red-500">{deleteAvatar.error.message}</Text>
+              )}
+              {measurementsSaved && (
+                <Text className="text-[12px] text-brand-green-deep">
+                  {t('compte.measurementsSaved')}
+                </Text>
+              )}
+
+              <Pressable
+                onPress={saveMeasurements}
+                disabled={!canSaveAvatar || isSavingAvatar}
+                className="items-center rounded-lg bg-app-inv py-2.5 disabled:opacity-50">
+                <Text className="text-[13px] font-semibold text-app-inv-fg">
+                  {isSavingAvatar ? t('essayage.creating') : t('essayage.saveMeasurements')}
+                </Text>
+              </Pressable>
             </View>
           )}
         </View>

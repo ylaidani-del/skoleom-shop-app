@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -76,11 +76,6 @@ export default function ProduitScreen() {
       v.attributes.every((a) => selectedOptions[attributeKey(a)] === a.option)
     );
   }, [variable, product?.variationAttributes, selectedOptions, variations]);
-
-  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-  }, []);
 
   if (isLoading) {
     return (
@@ -228,12 +223,6 @@ export default function ProduitScreen() {
             {!!description && (
               <Text className="pt-1 text-[13px] leading-[1.55] text-app-fg-2">{description}</Text>
             )}
-
-            {!!product.sku && (
-              <Text className="pt-0.5 text-[11px] text-app-fg-3">
-                {t('produit.sku')} · {product.sku}
-              </Text>
-            )}
           </View>
 
           <View className="gap-2.5">
@@ -334,9 +323,7 @@ export default function ProduitScreen() {
                       },
                       {
                         onSuccess: () => {
-                          setQuantity(1);
-                          setSelectedOptions({});
-                          resetTimerRef.current = setTimeout(() => addToCart.reset(), 1800);
+                          router.push('/(drawer)/(tabs)/panier');
                         },
                       }
                     )
