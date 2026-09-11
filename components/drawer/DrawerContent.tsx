@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type DrawerContentComponentProps } from '@react-navigation/drawer';
+import { type DrawerContentComponentProps } from 'expo-router/drawer';
 import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useMe } from '@/api/user';

@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
@@ -9,18 +8,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cartKeys, useCart } from '@/api/cart';
 import {
+  PAYMENT_SUCCESS_URL_PREFIX,
   getPaymentPopupUrl,
   paymentIntentIdFromClientSecret,
   useConfirmPayment,
   useCreatePaymentIntent,
 } from '@/api/payment';
+import { StripePaymentModal } from '@/components/checkout/StripePaymentModal';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { PALETTES } from '@/constants/theme';
 import { useCartKeyStore } from '@/store/cartKeyStore';
 import { useThemeStore } from '@/store/themeStore';
 import { formatPrice } from '@/utils/currency';
 
-type Phase = 'idle' | 'opening' | 'confirming' | 'success' | 'failed';
+type Phase = 'idle' | 'opening' | 'paying' | 'confirming' | 'success' | 'failed';
 
 export default function PaymentScreen() {
   const { t } = useTranslation();
@@ -34,41 +35,60 @@ export default function PaymentScreen() {
   const createPaymentIntent = useCreatePaymentIntent();
   const confirmPayment = useConfirmPayment();
   const [phase, setPhase] = useState<Phase>('idle');
+  const [checkout, setCheckout] = useState<{ url: string; paymentIntentId: string } | null>(null);
 
   const totals = cart?.totals;
   const isBusy = phase === 'opening' || phase === 'confirming';
 
-  // The card is collected by Stripe's own hosted popup page (no native Stripe
-  // SDK in this app), opened in an in-app browser. Once it closes — whether
-  // the user paid or gave up — the backend is the source of truth for what
-  // actually happened, via /payment/confirm's live Stripe status check.
+  // The card is collected by Stripe's own hosted checkout page (no native
+  // Stripe SDK in this app), rendered inside an in-app WebView modal so the
+  // user never leaves the app. Once the modal reports success, the backend
+  // is still the source of truth for what actually happened, via
+  // /payment/confirm's live Stripe status check.
   const handlePay = () => {
     if (!cartKey) return;
     setPhase('opening');
     createPaymentIntent.mutate(
       { cartKey },
       {
-        onSuccess: async (intent) => {
-          await WebBrowser.openBrowserAsync(getPaymentPopupUrl(intent.clientSecret, intent.amount));
-          setPhase('confirming');
-          confirmPayment.mutate(
-            { paymentIntentId: paymentIntentIdFromClientSecret(intent.clientSecret) },
-            {
-              onSuccess: (paid) => {
-                if (paid) {
-                  setPhase('success');
-                  queryClient.invalidateQueries({ queryKey: cartKeys.detail(cartKey) });
-                } else {
-                  setPhase('failed');
-                }
-              },
-              onError: () => setPhase('failed'),
-            }
-          );
+        onSuccess: (intent) => {
+          setCheckout({
+            url: getPaymentPopupUrl(intent.clientSecret, intent.amount),
+            paymentIntentId: paymentIntentIdFromClientSecret(intent.clientSecret),
+          });
+          setPhase('paying');
         },
         onError: () => setPhase('idle'),
       }
     );
+  };
+
+  const handleCheckoutSuccess = () => {
+    if (!checkout || !cartKey) return;
+    setPhase('confirming');
+    confirmPayment.mutate(
+      { paymentIntentId: checkout.paymentIntentId },
+      {
+        onSuccess: (paid) => {
+          setCheckout(null);
+          if (paid) {
+            setPhase('success');
+            queryClient.invalidateQueries({ queryKey: cartKeys.detail(cartKey) });
+          } else {
+            setPhase('failed');
+          }
+        },
+        onError: () => {
+          setCheckout(null);
+          setPhase('failed');
+        },
+      }
+    );
+  };
+
+  const handleCheckoutClose = () => {
+    setCheckout(null);
+    setPhase('idle');
   };
 
   if (phase === 'success') {
@@ -172,6 +192,14 @@ export default function PaymentScreen() {
           onPress={handlePay}
         />
       </View>
+
+      <StripePaymentModal
+        visible={phase === 'paying' && !!checkout}
+        url={checkout?.url ?? ''}
+        successUrlPrefix={PAYMENT_SUCCESS_URL_PREFIX}
+        onSuccess={handleCheckoutSuccess}
+        onClose={handleCheckoutClose}
+      />
     </View>
   );
 }

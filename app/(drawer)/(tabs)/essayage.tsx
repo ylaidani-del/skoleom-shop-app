@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -139,16 +139,24 @@ export default function EssayageTab() {
   const historyQuery = useTryonHistory(avatar?.avatarId);
   const history = historyQuery.data?.data ?? [];
 
-  useEffect(() => {
+  // Adjusted directly during render (React's documented pattern for syncing
+  // state to a changed prop: https://react.dev/learn/you-might-not-need-an-effect)
+  // rather than in a useEffect, so a route navigation with a new productId is
+  // picked up without an extra render pass.
+  const [prevInitialProductId, setPrevInitialProductId] = useState(initialProductId);
+  if (initialProductId !== prevInitialProductId) {
+    setPrevInitialProductId(initialProductId);
     if (initialProductId) setSelectedProductId(initialProductId);
-  }, [initialProductId]);
+  }
 
   // Local measurements are device-only (AsyncStorage). If the user already has
   // a server-side avatar but no local measurements (fresh install, new device,
   // cleared storage...), fall back to the measurements stored with the avatar
-  // so the "Essayer sur moi" button isn't silently stuck disabled.
-  useEffect(() => {
-    if (storedMeasurements || !avatar?.measurements) return;
+  // so the "Essayer sur moi" button isn't silently stuck disabled. Seeded
+  // directly during render (guarded by `measurementsSeeded`) rather than in an
+  // effect, for the same reason as above.
+  const [measurementsSeeded, setMeasurementsSeeded] = useState(false);
+  if (!measurementsSeeded && !storedMeasurements && avatar?.measurements) {
     const m = avatar.measurements;
     const seeded: Measurements = {
       height: Number(m.height) || 0,
@@ -158,6 +166,7 @@ export default function EssayageTab() {
       footLength: Number(m.footLength) || 0,
     };
     if (Object.values(seeded).every((value) => value > 0)) {
+      setMeasurementsSeeded(true);
       setStoredMeasurements(seeded);
       setForm({
         height: String(seeded.height),
@@ -167,7 +176,7 @@ export default function EssayageTab() {
         footLength: String(seeded.footLength),
       });
     }
-  }, [avatar, storedMeasurements, setStoredMeasurements]);
+  }
 
   const measurements: Measurements = {
     height: Number(form.height),

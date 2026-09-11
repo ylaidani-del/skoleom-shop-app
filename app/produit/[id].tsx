@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -77,13 +77,10 @@ export default function ProduitScreen() {
     );
   }, [variable, product?.variationAttributes, selectedOptions, variations]);
 
-  useEffect(() => {
-    if (!addToCart.isSuccess) return;
-    setQuantity(1);
-    setSelectedOptions({});
-    const timer = setTimeout(() => addToCart.reset(), 1800);
-    return () => clearTimeout(timer);
-  }, [addToCart.isSuccess]);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+  }, []);
 
   if (isLoading) {
     return (
@@ -330,10 +327,19 @@ export default function ProduitScreen() {
 
                 <Pressable
                   onPress={() =>
-                    addToCart.mutate({
-                      productId: selectedVariation ? selectedVariation.id : product.id,
-                      quantity,
-                    })
+                    addToCart.mutate(
+                      {
+                        productId: selectedVariation ? selectedVariation.id : product.id,
+                        quantity,
+                      },
+                      {
+                        onSuccess: () => {
+                          setQuantity(1);
+                          setSelectedOptions({});
+                          resetTimerRef.current = setTimeout(() => addToCart.reset(), 1800);
+                        },
+                      }
+                    )
                   }
                   disabled={!canAddToCart || addToCart.isPending}
                   className="items-center rounded-xl border-[1.5px] border-app-border-2 bg-app-surface py-3.5 disabled:opacity-40">

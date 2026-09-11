@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerActions } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
+import { type DrawerNavigationProp } from 'expo-router/drawer';
 import { Pressable, Text, View } from 'react-native';
 
 import { useCart } from '@/api/cart';
@@ -13,7 +13,7 @@ interface ScreenHeaderProps {
 
 export function ScreenHeader({ title }: ScreenHeaderProps) {
   const router = useRouter();
-  const navigation = useNavigation();
+  const navigation = useNavigation<DrawerNavigationProp<ReactNavigation.RootParamList>>();
   const cartCount = useCart().data?.item_count ?? 0;
   const mode = useThemeStore((state) => state.mode);
   const setMode = useThemeStore((state) => state.setMode);
@@ -23,7 +23,7 @@ export function ScreenHeader({ title }: ScreenHeaderProps) {
     <View className="flex-row items-end justify-between px-4 pb-1">
       <View className="flex-1 flex-row items-center gap-3">
         <Pressable
-          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+          onPress={() => navigation.openDrawer()}
           hitSlop={8}
           className="h-9 w-9 items-center justify-center rounded-full bg-app-fill">
           <Ionicons name="menu" size={18} color={fg} />

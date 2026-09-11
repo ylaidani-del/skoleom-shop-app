@@ -4,7 +4,11 @@
     "slug": "skoleom-shop-app",
     "version": "1.0.0",
     "scheme": "skoleom-shop-app",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -28,7 +32,8 @@
           "photosPermission": "Skoleom a besoin d'accéder à vos photos pour créer votre avatar d'essayage.",
           "cameraPermission": "Skoleom a besoin de la caméra pour prendre la photo de votre avatar d'essayage."
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -37,7 +42,9 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true
     },

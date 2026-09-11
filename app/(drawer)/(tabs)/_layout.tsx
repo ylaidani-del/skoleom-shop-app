@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { type ColorValue } from 'react-native';
 
 import { BRAND, PALETTES } from '@/constants/theme';
 import { useThemeStore } from '@/store/themeStore';
@@ -15,7 +16,15 @@ const ICONS: Record<string, { active: IconName; inactive: IconName }> = {
   compte: { active: 'person', inactive: 'person-outline' },
 };
 
-function TabIcon({ name, focused, color }: { name: string; focused: boolean; color: string }) {
+function TabIcon({
+  name,
+  focused,
+  color,
+}: {
+  name: string;
+  focused: boolean;
+  color: ColorValue;
+}) {
   const icon = ICONS[name];
   return <Ionicons name={focused ? icon.active : icon.inactive} size={21} color={color} />;
 }

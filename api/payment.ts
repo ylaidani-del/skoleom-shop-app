@@ -30,22 +30,27 @@ export const paymentIntentIdFromClientSecret = (clientSecret: string): string =>
 // `/api/payment/popup` is not a JSON endpoint — verified live: it serves a
 // full standalone HTML page (Stripe Elements card form + Apple/Google Pay
 // Express Checkout) reading `clientSecret`/`amount` from the query string.
-// It's meant to be opened in a browser, not fetched — hence a URL builder
-// instead of a query hook.
+// It's meant to be loaded in a browser/WebView, not fetched as JSON — hence
+// a URL builder instead of a query hook.
 export const getPaymentPopupUrl = (clientSecret: string, amount?: number): string => {
   const params = new URLSearchParams({ clientSecret });
   if (amount !== undefined) params.set('amount', String(amount));
   return `${SESYNC_BASE_URL}/api/payment/popup?${params.toString()}`;
 };
 
+// On success the popup page navigates here (verified live) — the in-app
+// WebView intercepts any navigation starting with this prefix instead of
+// letting the (also HTML) success page load.
+export const PAYMENT_SUCCESS_URL_PREFIX = `${SESYNC_BASE_URL}/api/payment/success`;
+
 /* ─────────────────────────────────────────────
    Cart checkout (one-off payments)
 ───────────────────────────────────────────── */
 
 // Creates a Stripe PaymentIntent scoped to one cart. The card is then
-// collected via the hosted popup page (`getPaymentPopupUrl`) opened in an
-// in-app browser — there's no native Stripe SDK in this app, so the popup's
-// own Stripe Elements form is what actually takes the card.
+// collected via the hosted popup page (`getPaymentPopupUrl`) rendered inside
+// an in-app WebView (`StripePaymentModal`) — there's no native Stripe SDK in
+// this app, so the popup's own Stripe Elements form is what takes the card.
 export const useCreatePaymentIntent = () =>
   useMutation<PaymentIntent, Error, { cartKey: string }>({
     mutationFn: async ({ cartKey }) => {
