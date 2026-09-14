@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Pressable,
@@ -16,11 +16,13 @@ import {
   View,
 } from 'react-native';
 
-import { useCreateAvatar, useGetUserAvatar, useUpdateAvatar } from '@/api/avatar';
+import { useCreateAvatar, useDeleteAvatar, useGetUserAvatar, useUpdateAvatar } from '@/api/avatar';
 import { useAddCartItem } from '@/api/cart';
 import { flattenProducts, isTestableProduct, useProducts, type WooProduct } from '@/api/product';
 import { useDeleteTryon, useTryOn, useTryonHistory, type TryOnHistoryItem } from '@/api/tryon';
 import { useMe } from '@/api/user';
+import { AvatarPhotoPicker } from '@/components/avatar/AvatarPhotoPicker';
+import { DEFAULT_MEASUREMENTS, MeasurementSliders } from '@/components/avatar/MeasurementSliders';
 import { Container } from '@/components/Container';
 import { ScreenHeader } from '@/components/shop/ScreenHeader';
 import { GradientButton } from '@/components/ui/GradientButton';
@@ -29,31 +31,10 @@ import { TESTABLE_SLUGS_PARAM } from '@/constants/testableCategories';
 import { useFilterStore } from '@/store/filterStore';
 import { useMeasurementsStore, type Measurements } from '@/store/measurementsStore';
 import { useThemeStore } from '@/store/themeStore';
+import type { AvatarPhoto } from '@/utils/avatarPhoto';
 import { formatPrice } from '@/utils/currency';
 
-const emptyForm = { height: '', weight: '', chest: '', waist: '', footLength: '' };
-
 const formatFitScore = (score: number) => Math.round(score <= 1 ? score * 100 : score);
-
-interface MeasurementFieldProps {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-}
-
-function MeasurementField({ label, value, onChangeText }: MeasurementFieldProps) {
-  return (
-    <View className="flex-1 gap-1">
-      <Text className="text-[10.5px] font-medium text-app-fg-3">{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType="numeric"
-        className="rounded-lg border border-app-border px-2.5 py-2 text-[13px] text-app-fg"
-      />
-    </View>
-  );
-}
 
 interface WardrobeGridItemProps {
   product: WooProduct;
@@ -107,27 +88,21 @@ export default function EssayageTab() {
   const storedMeasurements = useMeasurementsStore((state) => state.measurements);
   const setStoredMeasurements = useMeasurementsStore((state) => state.setMeasurements);
 
-  const [form, setForm] = useState(() =>
-    storedMeasurements
-      ? {
-          height: String(storedMeasurements.height),
-          weight: String(storedMeasurements.weight),
-          chest: String(storedMeasurements.chest),
-          waist: String(storedMeasurements.waist),
-          footLength: String(storedMeasurements.footLength),
-        }
-      : emptyForm
+  const [measurements, setMeasurements] = useState<Measurements>(
+    () => storedMeasurements ?? DEFAULT_MEASUREMENTS
   );
-  const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
+  const [photo, setPhoto] = useState<AvatarPhoto | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     initialProductId ?? null
   );
   const [previewHistoryItem, setPreviewHistoryItem] = useState<TryOnHistoryItem | null>(null);
   const [search, setSearch] = useState('');
   const [isEditingMeasurements, setIsEditingMeasurements] = useState(false);
+  const [isEditingAvatar, setIsEditingAvatar] = useState(false);
 
   const createAvatar = useCreateAvatar();
   const updateAvatar = useUpdateAvatar();
+  const deleteAvatar = useDeleteAvatar();
   const tryOn = useTryOn();
   const deleteTryon = useDeleteTryon();
   const addToCart = useAddCartItem();
@@ -168,47 +143,16 @@ export default function EssayageTab() {
     if (Object.values(seeded).every((value) => value > 0)) {
       setMeasurementsSeeded(true);
       setStoredMeasurements(seeded);
-      setForm({
-        height: String(seeded.height),
-        weight: String(seeded.weight),
-        chest: String(seeded.chest),
-        waist: String(seeded.waist),
-        footLength: String(seeded.footLength),
-      });
+      setMeasurements(seeded);
     }
   }
 
-  const measurements: Measurements = {
-    height: Number(form.height),
-    weight: Number(form.weight),
-    chest: Number(form.chest),
-    waist: Number(form.waist),
-    footLength: Number(form.footLength),
-  };
   const measurementsValid = Object.values(measurements).every(
     (value) => Number.isFinite(value) && value > 0
   );
 
-  const setField = (key: keyof typeof form) => (value: string) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
-
-  const pickPhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      base64: true,
-      quality: 0.6,
-      allowsEditing: true,
-      aspect: [3, 4],
-    });
-    if (result.canceled) return;
-
-    const asset = result.assets[0];
-    if (asset.base64) setPhoto({ uri: asset.uri, base64: asset.base64 });
-  };
-
+  // Also used to regenerate an existing avatar: there is a single avatar per
+  // user server-side, so posting a new photo replaces the previous one.
   const handleCreateAvatar = () => {
     if (!photo || !measurementsValid) return;
     createAvatar.mutate(
@@ -217,10 +161,39 @@ export default function EssayageTab() {
         onSuccess: () => {
           setStoredMeasurements(measurements);
           setPhoto(null);
+          setIsEditingAvatar(false);
+          // The new avatar has its own id, so the stage and the history shown
+          // next to it both belong to the avatar that no longer exists.
+          setPreviewHistoryItem(null);
+          tryOn.reset();
           queryClient.invalidateQueries({ queryKey: ['ai-avatar', 'user', userId] });
         },
       }
     );
+  };
+
+  const handleDeleteAvatar = () => {
+    if (!avatar) return;
+    Alert.alert(t('compte.removeAvatarConfirmTitle'), t('compte.removeAvatarConfirmBody'), [
+      { text: t('compte.cancel'), style: 'cancel' },
+      {
+        text: t('compte.removeAvatar'),
+        style: 'destructive',
+        onPress: () => {
+          deleteAvatar.mutate(
+            { avatarId: avatar.avatarId, userId },
+            {
+              onSuccess: () => {
+                setPhoto(null);
+                setIsEditingAvatar(false);
+                setPreviewHistoryItem(null);
+                tryOn.reset();
+              },
+            }
+          );
+        },
+      },
+    ]);
   };
 
   const handleTryOn = (product: WooProduct) => {
@@ -270,23 +243,16 @@ export default function EssayageTab() {
           showsVerticalScrollIndicator={false}
           contentContainerClassName="gap-4 px-4 pb-10 pt-2">
           <View className="gap-4 rounded-2xl bg-brand-black p-5">
-            <Pressable
-              onPress={pickPhoto}
-              className="aspect-[3/4] items-center justify-center overflow-hidden rounded-xl bg-white/10">
-              {photo ? (
-                <Image source={{ uri: photo.uri }} className="h-full w-full" resizeMode="cover" />
-              ) : (
-                <Ionicons name="camera-outline" size={30} color="#dbea18" />
-              )}
-            </Pressable>
-
-            <Pressable
-              onPress={pickPhoto}
-              className="items-center rounded-xl border border-white/25 bg-white/10 py-3">
-              <Text className="text-[13px] font-medium text-white">
-                {photo ? t('essayage.retakePhoto') : t('essayage.addPhoto')}
+            <AvatarPhotoPicker
+              photo={photo}
+              onPick={setPhoto}
+              tone="dark"
+              layout="column"
+              previewClassName="aspect-[3/4] w-full rounded-xl">
+              <Text className="text-[11px] leading-[1.5] text-white/55">
+                {t('avatar.photoHint')}
               </Text>
-            </Pressable>
+            </AvatarPhotoPicker>
 
             <Text className="text-[15px] font-semibold text-white">
               {t('essayage.onboardingTitle')}
@@ -295,35 +261,11 @@ export default function EssayageTab() {
               {t('essayage.onboardingBody')}
             </Text>
 
-            <View className="flex-row gap-2.5">
-              <MeasurementField
-                label={t('essayage.heightLabel')}
-                value={form.height}
-                onChangeText={setField('height')}
-              />
-              <MeasurementField
-                label={t('essayage.weightLabel')}
-                value={form.weight}
-                onChangeText={setField('weight')}
-              />
-            </View>
-            <View className="flex-row gap-2.5">
-              <MeasurementField
-                label={t('essayage.chestLabel')}
-                value={form.chest}
-                onChangeText={setField('chest')}
-              />
-              <MeasurementField
-                label={t('essayage.waistLabel')}
-                value={form.waist}
-                onChangeText={setField('waist')}
-              />
-              <MeasurementField
-                label={t('essayage.footLabel')}
-                value={form.footLength}
-                onChangeText={setField('footLength')}
-              />
-            </View>
+            <MeasurementSliders
+              measurements={measurements}
+              onChange={setMeasurements}
+              tone="dark"
+            />
 
             {createAvatar.error && (
               <Text className="text-[12px] text-red-400">{createAvatar.error.message}</Text>
@@ -390,9 +332,7 @@ export default function EssayageTab() {
               {tryOn.isPending ? (
                 <View className="flex-1 items-center justify-center gap-3">
                   <ActivityIndicator color="#dbea18" />
-                  <Text className="text-[13px] font-medium text-white">
-                    {t('essayage.trying')}
-                  </Text>
+                  <Text className="text-[13px] font-medium text-white">{t('essayage.trying')}</Text>
                 </View>
               ) : (
                 <Image source={{ uri: stageUri }} className="h-full w-full" resizeMode="cover" />
@@ -424,9 +364,71 @@ export default function EssayageTab() {
               </View>
             )}
 
-            {tryOn.error && (
-              <Text className="text-[12px] text-red-500">{tryOn.error.message}</Text>
-            )}
+            {tryOn.error && <Text className="text-[12px] text-red-500">{tryOn.error.message}</Text>}
+
+            <View className="gap-2.5 rounded-2xl border border-app-border bg-app-surface p-3.5">
+              <Pressable
+                onPress={() => setIsEditingAvatar((prev) => !prev)}
+                className="flex-row items-center justify-between">
+                <Text className="text-[13px] font-semibold text-app-fg">
+                  {t('essayage.myAvatar')}
+                </Text>
+                <Ionicons
+                  name={isEditingAvatar ? 'chevron-up' : 'camera-outline'}
+                  size={16}
+                  color={palette.fg2}
+                />
+              </Pressable>
+
+              {isEditingAvatar && (
+                <View className="gap-3 pt-1">
+                  <Text className="text-[11.5px] leading-[1.5] text-app-fg-2">
+                    {t('essayage.changeAvatarHint')}
+                  </Text>
+
+                  <AvatarPhotoPicker
+                    photo={photo}
+                    currentUrl={avatar.avatarUrl}
+                    onPick={setPhoto}
+                    previewClassName="h-[72px] w-[58px] rounded-xl"
+                  />
+
+                  {createAvatar.error && (
+                    <Text className="text-[12px] text-red-500">{createAvatar.error.message}</Text>
+                  )}
+                  {deleteAvatar.error && (
+                    <Text className="text-[12px] text-red-500">{deleteAvatar.error.message}</Text>
+                  )}
+                  {!photo && (
+                    <Text className="text-[11px] text-app-fg-3">
+                      {t('essayage.avatarPhotoRequired')}
+                    </Text>
+                  )}
+
+                  <GradientButton
+                    label={
+                      createAvatar.isPending
+                        ? t('essayage.creating')
+                        : t('essayage.regenerateAvatar')
+                    }
+                    disabled={!photo || !measurementsValid || createAvatar.isPending}
+                    onPress={handleCreateAvatar}
+                  />
+
+                  <Pressable
+                    onPress={handleDeleteAvatar}
+                    disabled={deleteAvatar.isPending}
+                    hitSlop={6}
+                    className="items-center py-0.5">
+                    <Text className="text-[11.5px] font-medium text-red-500">
+                      {deleteAvatar.isPending
+                        ? t('compte.removingAvatar')
+                        : t('compte.removeAvatar')}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
 
             <View className="gap-2.5 rounded-2xl border border-app-border bg-app-surface p-3.5">
               <Pressable
@@ -443,36 +445,8 @@ export default function EssayageTab() {
               </Pressable>
 
               {isEditingMeasurements && (
-                <View className="gap-2.5 pt-1">
-                  <View className="flex-row gap-2.5">
-                    <MeasurementField
-                      label={t('essayage.heightLabel')}
-                      value={form.height}
-                      onChangeText={setField('height')}
-                    />
-                    <MeasurementField
-                      label={t('essayage.weightLabel')}
-                      value={form.weight}
-                      onChangeText={setField('weight')}
-                    />
-                  </View>
-                  <View className="flex-row gap-2.5">
-                    <MeasurementField
-                      label={t('essayage.chestLabel')}
-                      value={form.chest}
-                      onChangeText={setField('chest')}
-                    />
-                    <MeasurementField
-                      label={t('essayage.waistLabel')}
-                      value={form.waist}
-                      onChangeText={setField('waist')}
-                    />
-                    <MeasurementField
-                      label={t('essayage.footLabel')}
-                      value={form.footLength}
-                      onChangeText={setField('footLength')}
-                    />
-                  </View>
+                <View className="gap-3 pt-1">
+                  <MeasurementSliders measurements={measurements} onChange={setMeasurements} />
 
                   {updateAvatar.error && (
                     <Text className="text-[12px] text-red-500">{updateAvatar.error.message}</Text>

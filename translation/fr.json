@@ -207,6 +207,15 @@
     "selectProduct": "Choisissez une pièce à essayer",
     "searchPlaceholder": "Rechercher une pièce...",
     "historyTitle": "Vos essayages",
-    "historyEmpty": "Aucun essayage pour le moment."
+    "historyEmpty": "Aucun essayage pour le moment.",
+    "myAvatar": "Mon avatar",
+    "changeAvatarHint": "Choisissez une nouvelle photo puis régénérez votre avatar. Vos essayages précédents seront remplacés.",
+    "regenerateAvatar": "Régénérer mon avatar",
+    "avatarPhotoRequired": "Choisissez une photo pour régénérer votre avatar."
+  },
+  "avatar": {
+    "takePhoto": "Prendre une photo",
+    "chooseFromGallery": "Galerie",
+    "photoHint": "Une photo en pied, bien éclairée, donne le meilleur avatar."
   }
 }

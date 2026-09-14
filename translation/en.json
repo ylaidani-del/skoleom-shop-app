@@ -207,6 +207,15 @@
     "selectProduct": "Choose a piece to try on",
     "searchPlaceholder": "Search for a piece...",
     "historyTitle": "Your try-ons",
-    "historyEmpty": "No try-ons yet."
+    "historyEmpty": "No try-ons yet.",
+    "myAvatar": "My avatar",
+    "changeAvatarHint": "Pick a new photo, then regenerate your avatar. Your previous try-ons will be replaced.",
+    "regenerateAvatar": "Regenerate my avatar",
+    "avatarPhotoRequired": "Pick a photo to regenerate your avatar."
+  },
+  "avatar": {
+    "takePhoto": "Take a photo",
+    "chooseFromGallery": "Gallery",
+    "photoHint": "A well-lit, full-body photo gives the best avatar."
   }
 }
